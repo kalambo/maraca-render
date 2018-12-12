@@ -1,62 +1,126 @@
 import * as crel from 'crel';
+import { toTypedValue } from 'maraca';
 
 export const isNumber = x => !isNaN(x) && !isNaN(parseFloat(x));
+
+export const isInteger = x => {
+  if (!isNumber(x)) return false;
+  const n = parseFloat(x);
+  return Math.floor(n) === n;
+};
+
+export const isObject = x =>
+  Object.prototype.toString.call(x) === '[object Object]';
 
 export const toNumber = s => (isNumber(s) ? parseFloat(s) : 0);
 
 export const split = s => (s || '').split(/\s+/).filter(v => v);
 
-export const getValue = data => {
-  if (data.type === 'nil') return null;
-  if (data.type === 'value') return data.value;
-  const keys = Object.keys(data.value.values);
-  if (keys.length === 0) return data.value.indices.map(getValue);
-  return keys.reduce(
-    (res, k) => ({ ...res, k: getValue(data.value.values[k].value) }),
-    {},
-  );
-};
-
-export const extract = (values, ignore = [] as string[]) => {
-  const keys = Object.keys(values);
-  return {
-    values: keys
-      .map(key => ({
-        key,
-        value: ignore.includes(key)
-          ? values[key].value
-          : getValue(values[key].value),
-      }))
-      .filter(({ value }) => value)
-      .reduce((res, { key, value }) => ({ ...res, [key]: value }), {} as any),
-    setters: keys
-      .map(key => ({ key, value: values[key].value.set }))
-      .filter(({ value }) => value)
-      .reduce((res, { key, value }) => ({ ...res, [key]: value }), {} as any),
-  };
-};
-
-export const dom = (...args) => {
+const createElem = (...args) => {
   const elem =
     args[0] === 'text' ? document.createTextNode(args[1]) : crel(...args);
   elem.__maraca = true;
   return elem;
 };
 
-export const getChildren = node =>
-  ([] as any).slice.call(node.childNodes).filter(c => c.__maraca);
+export const createTextNode = text => createElem('text', text);
 
-export const createElem = (depth, child) =>
+export const createNode = (child, depth = 0) =>
   Array.from({ length: depth }).reduce(
-    (res, _) => dom('div', res),
-    typeof child === 'string' ? dom(child) : child,
+    (res, _) => createElem('div', res),
+    typeof child === 'string' ? createElem(child) : child,
   );
 
-export const findElem = (node, depth) =>
+export const getChildren = node =>
+  node && ([] as any).slice.call(node.childNodes).filter(c => c.__maraca);
+
+export const findChild = (node, depth) =>
   Array.from({ length: depth }).reduce(res => res && getChildren(res)[0], node);
 
-export const toPx = s => {
-  if (!s) return '';
-  if (!Array.isArray(s)) return `${s}px`;
-  return s.map(toPx).join(' ');
+export const cleanObj = obj =>
+  Object.keys(obj).reduce(
+    (res, k) =>
+      obj[k]
+        ? { ...res, [k]: isObject(obj[k]) ? cleanObj(obj[k]) : obj[k] }
+        : res,
+    {},
+  );
+
+export const mergeObjs = (...objs) =>
+  objs.reduce((a, b) =>
+    Array.from(new Set([...Object.keys(a), ...Object.keys(b)])).reduce(
+      (res, k) => ({
+        ...res,
+        [k]:
+          isObject(a[k]) && isObject(b[k])
+            ? mergeObjs(a[k], b[k])
+            : b[k] === undefined
+            ? a[k]
+            : b[k],
+      }),
+      {},
+    ),
+  );
+
+export const diffObjs = (next, prev) => {
+  const result = {};
+  Array.from(
+    new Set([...Object.keys(next), ...Object.keys(prev || {})]),
+  ).forEach(k => {
+    if (next[k] !== (prev || {})[k]) {
+      result[k] = isObject(next[k])
+        ? diffObjs(next[k], (prev || {})[k])
+        : next[k];
+    }
+  });
+  return result;
 };
+
+export const applyObj = (target, obj) => {
+  Object.keys(obj).forEach(k => {
+    if (!isObject(obj[k])) {
+      target[k] = obj[k] === undefined ? null : obj[k];
+    } else {
+      applyObj(target[k], obj[k]);
+    }
+  });
+  return target;
+};
+
+export const parseValue = (config, data) => {
+  if (!config) return null;
+  if (typeof config === 'object') {
+    if (data.type !== 'list') return {};
+    return parseValues(config, data.value.values);
+  }
+  if (config === true) return data;
+  const { type, value } = data;
+  if (config === 'boolean') return type !== 'nil';
+  if (config === 'string') return type === 'value' && value;
+  if (['integer', 'number', 'time', 'location'].includes(config)) {
+    const typed = toTypedValue(data);
+    if (config !== 'integer') return typed.type === config && typed.value;
+    else return typed.integer && typed.value;
+  }
+  return null;
+};
+
+export const parseValues = (config, values) =>
+  Object.keys(config).reduce((res, k) => {
+    if (values[k]) {
+      const result = parseValue(config[k], values[k].value);
+      if (result) return { ...res, [k]: result };
+    }
+    return res;
+  }, {});
+
+export const getSetters = (setters, values) =>
+  [
+    Object.keys(setters).reduce((res, k) => {
+      if (values[k] && values[k].value.set) {
+        return { ...res, [k]: values[k].value.set };
+      }
+      return res;
+    }, {}),
+    setters,
+  ] as [any, any];

@@ -10,8 +10,9 @@ const isNumber = x => !isNaN(x) && !isNaN(parseFloat(x));
 
 const clean = (v, max) => Math.max(0, Math.min(max, Math.round(v)));
 
-export default (color, hex = false) => {
-  if (!color) return '';
+export default (color = '', hex = false) => {
+  if (!color) return null;
+
   const [h = 0, c = 0, l = 0, o = 100] = color
     .split(/\s+/)
     .filter(s => s)
