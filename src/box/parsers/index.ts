@@ -1,4 +1,4 @@
-import { isInteger, isNumber, split, toNumber } from '../utils';
+import { isInteger, isNumber, split, toNumber } from '../../utils';
 
 import color from './color';
 

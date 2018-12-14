@@ -4,15 +4,16 @@ import * as throttle from 'lodash.throttle';
 
 const resizeDetector = erd({ strategy: 'scroll' });
 
-import parsers from '../parsers';
-import { parseValues, getSetters } from '../utils';
+import { getSetters, getValues } from '../utils';
 
-export default (node, values, parent, cols) => {
-  const parsed = parseValues({ height: 'string', width: 'string' }, values);
+import parsers from './parsers';
+
+export default (node, values, context, cols) => {
+  const parsed = getValues(values, { height: 'string', width: 'string' });
   const { height, vAlign } = parsers.height(parsed.height);
   const { width, hAlign } = parsers.width(parsed.width);
-  const size = { height, vAlign, width: parent.width || width, hAlign };
-  const setters = getSetters({ height: true, width: true }, values)[0];
+  const size = { height, vAlign, width: context.width || width, hAlign };
+  const setters = getSetters(values, { height: true, width: true })[0];
   const same = {
     height: node && node.__size && node.__size.setHeight === setters.height,
     width: node && node.__size && node.__size.setWidth === setters.width,

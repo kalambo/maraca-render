@@ -1,5 +1,7 @@
-import * as crel from 'crel';
 import { toTypedValue } from 'maraca';
+
+export { default as dom } from './dom';
+export { default as update } from './update';
 
 export const isNumber = x => !isNaN(x) && !isNaN(parseFloat(x));
 
@@ -16,14 +18,18 @@ export const toNumber = s => (isNumber(s) ? parseFloat(s) : 0);
 
 export const split = s => (s || '').split(/\s+/).filter(v => v);
 
-const createElem = (...args) => {
-  const elem =
-    args[0] === 'text' ? document.createTextNode(args[1]) : crel(...args);
-  elem.__maraca = true;
-  return elem;
+export const createTextNode = text => {
+  const result = document.createTextNode(text);
+  (result as any).__maraca = true;
+  return result;
 };
 
-export const createTextNode = text => createElem('text', text);
+const createElem = (tag, child?) => {
+  const result = document.createElement(tag);
+  if (child) result.appendChild(child);
+  (result as any).__maraca = true;
+  return result;
+};
 
 export const createNode = (child, depth = 0) =>
   Array.from({ length: depth }).reduce(
@@ -91,7 +97,7 @@ export const parseValue = (config, data) => {
   if (!config) return null;
   if (typeof config === 'object') {
     if (data.type !== 'list') return {};
-    return parseValues(config, data.value.values);
+    return getValues(data.value.values, config);
   }
   if (config === true) return data;
   const { type, value } = data;
@@ -105,16 +111,18 @@ export const parseValue = (config, data) => {
   return null;
 };
 
-export const parseValues = (config, values) =>
-  Object.keys(config).reduce((res, k) => {
+export const getValues = (values, config, map?) => {
+  const result = Object.keys(config).reduce((res, k) => {
     if (values[k]) {
       const result = parseValue(config[k], values[k].value);
       if (result) return { ...res, [k]: result };
     }
     return res;
   }, {});
+  return map ? map(result) : result;
+};
 
-export const getSetters = (setters, values) =>
+export const getSetters = (values, setters) =>
   [
     Object.keys(setters).reduce((res, k) => {
       if (values[k] && values[k].value.set) {

@@ -1,11 +1,12 @@
-import { updateChildren } from './core';
+import { update } from './utils';
 
 export { default as box } from './box';
-export { default as dom } from './dom';
+export { dom } from './utils';
 
-export default (modes, node, data) => {
-  updateChildren(modes.reduce((res, m) => m(res), {}), 'box', node, [
-    { type: 'list', value: { indices: [data], values: {} } },
-  ]);
-  return node;
+export default (render, node) => data => {
+  update.children(
+    node,
+    [{ type: 'list', value: { indices: [data], values: {} } }],
+    render,
+  );
 };

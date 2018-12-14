@@ -1,4 +1,4 @@
-import { updateSimple } from './core';
+import { createNode, getSetters, getValues, update } from './index';
 
 const tags = [
   'a',
@@ -101,20 +101,19 @@ const valuesConfig = {
   },
 };
 
-export default modes =>
-  Object.assign(
-    modes,
-    tags.reduce<any>(
-      (res, tag) => ({
-        ...res,
-        [tag]: updateSimple(
-          modes,
-          !voidTags.includes(tag) && tag,
-          tag,
-          [valuesConfig, props => props],
-          {},
-        ),
-      }),
-      {},
-    ),
-  );
+export default tags.reduce<any>(
+  (res, tag) => ({
+    ...res,
+    [tag]: (node, values, indices, next) => {
+      const result = node || createNode(tag);
+      if (!voidTags.includes(tag)) update.children(result, indices, next);
+      update.props(
+        result,
+        getValues(values, valuesConfig),
+        getSetters(values, {}),
+      );
+      return result;
+    },
+  }),
+  {},
+);
