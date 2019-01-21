@@ -13,7 +13,7 @@ export default (node, values, context, cols) => {
   const { height, vAlign } = parsers.height(parsed.height);
   const { width, hAlign } = parsers.width(parsed.width);
   const size = { height, vAlign, width: context.width || width, hAlign };
-  const setters = getSetters(values, { height: true, width: true })[0];
+  const setters = getSetters(values, {}, { height: true, width: true })[1];
   const same = {
     height: node && node.__size && node.__size.setHeight === setters.height,
     width: node && node.__size && node.__size.setWidth === setters.width,

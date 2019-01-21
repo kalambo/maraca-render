@@ -18,7 +18,7 @@ export const toNumber = s => (isNumber(s) ? parseFloat(s) : 0);
 
 export const split = s => (s || '').split(/\s+/).filter(v => v);
 
-export const createTextNode = text => {
+const createTextNode = text => {
   const result = document.createTextNode(text);
   (result as any).__maraca = true;
   return result;
@@ -122,8 +122,9 @@ export const getValues = (values, config, map?) => {
   return map ? map(result) : result;
 };
 
-export const getSetters = (values, setters) =>
+export const getSetters = (values, config, setters) =>
   [
+    getValues(values, config),
     Object.keys(setters).reduce((res, k) => {
       if (values[k] && values[k].value.set) {
         return { ...res, [k]: values[k].value.set };
@@ -131,4 +132,13 @@ export const getSetters = (values, setters) =>
       return res;
     }, {}),
     setters,
-  ] as [any, any];
+  ] as [any, any, any];
+
+export const valueComponents = {
+  nil: () => null,
+  value: (node, data) => {
+    if (!node) return createTextNode(data.value);
+    node.nodeValue = data.value;
+    return node;
+  },
+};

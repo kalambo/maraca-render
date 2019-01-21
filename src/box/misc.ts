@@ -5,18 +5,21 @@ import parsers from './parsers';
 export const toPx = s => {
   if (!s) return null;
   if (!Array.isArray(s)) return `${s}px`;
-  return s.map(toPx).join(' ');
+  return s.map(x => toPx(x || '0')).join(' ');
 };
 
 export const textConfig = { style: 'string', color: 'string' };
-export const textInfo = (values, context) => {
-  const { fontSize, lineHeight, ...styleValues } = parsers.style(values.style);
+export const textInfo = (values, context, forceHeight = false) => {
+  const { fontSize, lineHeight, password, ...styleValues } = parsers.style(
+    values.style,
+  );
   const size = fontSize || context.size || 20;
-  const height = lineHeight || context.height || 1.5;
+  const height = forceHeight ? 1.5 : lineHeight || context.height || 1.5;
   return {
     pad: Math.floor(size * (height - 1)) * -0.5,
     info: { size, height },
     props: {
+      ...(password ? { type: 'password' } : {}),
       style: {
         fontSize: toPx(size),
         minHeight: toPx(size),
@@ -44,18 +47,23 @@ export const boxInfo = values => ({
 });
 
 export const boxSetters = {
-  hover: set => ({
-    onmouseenter: set && (() => set(toData(true))),
-    onmouseleave: set && (() => set(toData(false))),
-  }),
-  click: (set, { value }) => ({
-    onmousedown: set && (() => set(value || toData(null))),
-  }),
-  enter: (set, { value }) => ({
-    onkeypress:
-      set &&
-      (e => {
-        if (e.keyCode === 13) set(value || toData(null));
-      }),
-  }),
+  setters: {
+    hover: set => ({
+      onmouseenter: set && (() => set(toData(true))),
+      onmouseleave: set && (() => set(toData(false))),
+    }),
+    click: (set, values) => ({
+      onmousedown: set && (() => set(values().value || toData(null))),
+    }),
+    enter: (set, values) => ({
+      onkeypress:
+        set &&
+        (e => {
+          if (e.keyCode === 13) set(values().value || toData(null));
+        }),
+    }),
+  },
+  config: {
+    value: true,
+  },
 };

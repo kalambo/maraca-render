@@ -2,32 +2,44 @@ import {
   applyObj,
   cleanObj,
   createNode,
-  createTextNode,
   diffObjs,
   findChild,
   getChildren,
 } from './index';
 
 export default {
-  list: render => (node, data, next) => {
-    if (data.type === 'nil') return null;
-    if (data.type === 'value') {
-      if (!node || node.nodeType !== 3) return createTextNode(data.value);
-      node.nodeValue = data.value;
-      return node;
-    }
-    return render(node, data.value.values, data.value.indices, next);
-  },
-  components: (node, components, component, key, args, other?) => {
-    if (!components[component]) return other();
-    const result = components[component](
-      node && component === node[`__${key}`] && node,
+  components: (node, component, args) => {
+    const result = component(
+      node && component === node.__component && node,
       ...args,
     );
-    result[`__${key}`] = component;
+    result.__component = component;
     return result;
   },
-  children: (node, indices, update, depth = 0, group = 0) => {
+  props: (
+    node,
+    values,
+    [settersValues, setters, settersMap] = [{}, {}, {}],
+  ) => {
+    const prev = node && node.__props;
+    const cleanValues = cleanObj(values);
+    const settersDiff = diffObjs(setters, prev && prev.setters);
+    applyObj(node, {
+      ...diffObjs(cleanValues, prev && prev.values),
+      ...Object.keys(settersDiff).reduce(
+        (res, k) => ({
+          ...res,
+          ...settersMap[k](
+            settersDiff[k] || null,
+            () => node.__props.settersValues,
+          ),
+        }),
+        {},
+      ),
+    });
+    node.__props = { values: cleanValues, setters, settersValues };
+  },
+  children: (node, indices, next, depth = 0, group = 0) => {
     const rows = getChildren(node);
     const children = group
       ? rows.reduce((res, n) => [...res, ...getChildren(n)], [])
@@ -36,7 +48,7 @@ export default {
       const i = children.findIndex(c => c.__id === (d.id || index + 1));
       let child = i !== -1 && children.splice(i, 1)[0];
       const prev = child && findChild(child, depth);
-      const result = update(prev, d);
+      const result = next(prev, d);
       if (!result) {
         if (child) child.parentNode.removeChild(child);
       } else {
@@ -72,21 +84,5 @@ export default {
         if (getChildren(r).length === 0) node.removeChild(r);
       });
     }
-  },
-  props: (node, values, [setters, settersMap] = [{}, {}]) => {
-    const prev = node && node.__props;
-    const cleanValues = cleanObj(values);
-    const settersDiff = diffObjs(setters, prev && prev.setters);
-    applyObj(node, {
-      ...diffObjs(cleanValues, prev && prev.values),
-      ...Object.keys(settersDiff).reduce(
-        (res, k) => ({
-          ...res,
-          ...settersMap[k](settersDiff[k] || null, cleanValues),
-        }),
-        {},
-      ),
-    });
-    node.__props = { values: cleanValues, setters };
   },
 };

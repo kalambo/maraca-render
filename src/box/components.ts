@@ -8,7 +8,6 @@ import {
   getSetters,
   getValues,
   mergeObjs,
-  parseValue,
   update,
 } from '../utils';
 
@@ -24,32 +23,35 @@ import parsers from './parsers';
 import { padNode, padText } from './pad';
 import updateSize from './size';
 
-export default updateNode => ({
+export default {
   image: (node, values) => {
     const result = node || createNode('img');
+    const size = updateSize(result, values, {}, false);
     update.props(
       result,
-      getValues(
-        values,
-        { image: 'string', width: 'number' },
-        ({ image, width }) => ({
-          src: image,
-          style: { maxWidth: toPx(width) },
-        }),
+      mergeObjs(
+        size.props,
+        getValues(values, { image: 'string' }, ({ image }) => ({ src: image })),
       ),
-      getSetters(values, boxSetters),
+      getSetters(values, boxSetters.config, boxSetters.setters),
     );
     return result;
   },
-  input: (node, values) => {
-    const result = node || createNode('input');
+  input: (node, values, _, context) => {
+    const inner = (node && findChild(node, 2)) || createNode('input');
+    const vals = getValues(values, { ...textConfig, ...boxConfig });
+    const text = textInfo(vals, context, true);
+    const box = boxInfo(vals);
     update.props(
-      result,
-      getValues(values, { input: 'string' }, ({ input }) => ({
-        type: 'text',
-        value: input,
-      })),
-      getSetters(values, {
+      inner,
+      mergeObjs(
+        { type: 'text' },
+        getValues(values, { input: 'string' }, ({ input }) => ({
+          value: input,
+        })),
+        text.props,
+      ),
+      getSetters(values, boxSetters.config, {
         input: set => ({
           oninput: set && (e => set(toData(e.target.value))),
         }),
@@ -57,25 +59,33 @@ export default updateNode => ({
           onfocus: set && (() => set(toData(true))),
           onblur: set && (() => set(toData(false))),
         }),
-        ...boxSetters,
       }),
     );
+    const result = node || createNode(inner, 2);
+    update.props(
+      result,
+      box.props,
+      getSetters(values, boxSetters.config, boxSetters.setters),
+    );
+    padText(inner.parentNode, text.pad);
+    const [top, right, bottom, left] = box.pad || ([] as any);
+    padNode(inner.parentNode, 'pad', { top, right, bottom, left });
     return result;
   },
-  text: (node, values, indices, context) => {
+  text: (node, values, indices, context, next) => {
     const result = node || createNode('span');
     const text = textInfo(getValues(values, textConfig), context);
-    update.children(result, indices, updateNode('text', text.info));
-    update.props(result, text.props, getSetters(values, {}));
+    update.children(result, indices, next('text', text.info));
+    update.props(result, text.props);
     return result;
   },
-  box: (node, values, indices, context) => {
+  box: (node, values, indices, context, next) => {
     const vals = getValues(values, { ...textConfig, ...boxConfig });
     const text = textInfo(vals, context);
     const depths = { inner: 2, child: 2 };
     const inner = (node && findChild(node, depths.inner)) || createNode('div');
-    update.children(inner, indices, updateNode('box', text.info), depths.child);
-    update.props(inner, text.props, getSetters(values, {}));
+    update.children(inner, indices, next('box', text.info), depths.child);
+    update.props(inner, text.props);
     getChildren(inner).forEach(n => {
       const c = findChild(n, depths.child);
       c.parentNode.style.display =
@@ -90,13 +100,13 @@ export default updateNode => ({
     update.props(
       result,
       mergeObjs(box.props, size.props),
-      getSetters(values, boxSetters),
+      getSetters(values, boxSetters.config, boxSetters.setters),
     );
     const [top, right, bottom, left] = box.pad || ([] as any);
     padNode(inner, 'pad', { top, right, bottom, left });
     return result;
   },
-  cols: (node, values, indices, context) => {
+  cols: (node, values, indices, context, next) => {
     if (node) {
       [...node.childNodes].forEach(n => {
         if (n.__gap) node.removeChild(n);
@@ -111,19 +121,12 @@ export default updateNode => ({
       ...boxConfig,
     });
     const gap = parsers.dirs(vals.gap);
-    const { cols, equal } = parsers.cols(vals.cols, indices.length);
+    const { cols = 1, equal } = parsers.cols(vals.cols, indices.length);
     const text = textInfo(vals, context);
     update.children(
       result,
-      indices.map(d => {
-        const v = parseValue(
-          { '': 'string', gap: 'string', cols: 'string' },
-          d,
-        );
-        if (d.type === 'list' && !v[''] && !v.gap && !v.cols) return d;
-        return { type: 'list', value: { indices: [d], values: {} } };
-      }),
-      updateNode('box', { ...text.info, width: equal && `${100 / cols}%` }),
+      indices,
+      next('box', { ...text.info, width: equal && `${100 / cols}%` }, cols),
       0,
       cols,
     );
@@ -143,7 +146,7 @@ export default updateNode => ({
         box.props,
         size.props,
       ),
-      getSetters(values, boxSetters),
+      getSetters(values, boxSetters.config, boxSetters.setters),
     );
     getChildren(result).forEach((row, i) => {
       if (gap && i !== 0) {
@@ -172,4 +175,4 @@ export default updateNode => ({
     });
     return result;
   },
-});
+};

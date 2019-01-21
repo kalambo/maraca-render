@@ -1,4 +1,4 @@
-import { createNode, getSetters, getValues, update } from './index';
+import { createNode, getValues, update } from './index';
 
 const tags = [
   'a',
@@ -107,11 +107,7 @@ export default tags.reduce<any>(
     [tag]: (node, values, indices, next) => {
       const result = node || createNode(tag);
       if (!voidTags.includes(tag)) update.children(result, indices, next);
-      update.props(
-        result,
-        getValues(values, valuesConfig),
-        getSetters(values, {}),
-      );
+      update.props(result, getValues(values, valuesConfig));
       return result;
     },
   }),
