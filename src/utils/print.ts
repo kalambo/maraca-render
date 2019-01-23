@@ -34,7 +34,7 @@ export const parsers = {
 const indentBreak = (...docs) => ifBreak(indent(concat(docs)), concat(docs));
 
 const printConfig = (path, print, config) => {
-  if (config.type === 'set') {
+  if (config.type === 'assign') {
     if (config.args[1].type === 'nil') {
       return group(
         concat([':', indentBreak(line, path.call(print, 'args', '0'))]),
