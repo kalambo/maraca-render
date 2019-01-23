@@ -8,6 +8,7 @@ import {
   getSetters,
   getValues,
   mergeObjs,
+  printValue,
   update,
 } from '../utils';
 
@@ -24,6 +25,27 @@ import { padNode, padText } from './pad';
 import updateSize from './size';
 
 export default {
+  print: (node, values, _, context) => {
+    const inner = (node && findChild(node, 2)) || createNode('span');
+    const vals = getValues(values, { ...textConfig, ...boxConfig });
+    const text = textInfo(vals, context);
+    const box = boxInfo(vals);
+    const size = updateSize(inner, values, {}, false);
+    update.props(
+      inner,
+      mergeObjs({ style: { whiteSpace: 'pre-wrap' } }, text.props, size.props),
+    );
+    inner.textContent = printValue(
+      getValues(values, { print: true }).print,
+      Math.ceil(inner.offsetWidth / (text.info.size * 0.8)),
+    );
+    const result = node || createNode(inner, 2);
+    update.props(result, box.props);
+    padText(inner.parentNode, text.pad);
+    const [top, right, bottom, left] = box.pad || ([] as any);
+    padNode(inner.parentNode, 'pad', { top, right, bottom, left });
+    return result;
+  },
   image: (node, values) => {
     const result = node || createNode('img');
     const size = updateSize(result, values, {}, false);

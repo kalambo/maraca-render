@@ -77,13 +77,13 @@ lodash.throttle@^4.1.1:
   resolved "https://registry.yarnpkg.com/lodash.throttle/-/lodash.throttle-4.1.1.tgz#c23e91b710242ac70c37f1e1cda9274cc39bf2f4"
   integrity sha1-wj6RtxAkKscMN/HhzaknTMOb8vQ=
 
-maraca@^0.2.3:
-  version "0.2.3"
-  resolved "https://registry.yarnpkg.com/maraca/-/maraca-0.2.3.tgz#0a0b97c8ebadd923797d2dc1af262fa8c79ce368"
-  integrity sha512-fG17bia+be/iwM4rAQmQGiV4MEVnRpDd59Wwb5TEaVSjZGJNaqTyPbZIcv+ZgtZ9dgdCEgvRUzwSEiczbH/l7g==
+maraca@^0.2.4:
+  version "0.2.4"
+  resolved "https://registry.yarnpkg.com/maraca/-/maraca-0.2.4.tgz#9a16aec425922d43700b11e8e4b2901e62fadee1"
+  integrity sha512-xlVfOtqlWHpPM7cuSqX9PatitrjelSu4xGT4ykaWRGho4Vv1NcnZ4xZTUlja4a5oINQaWqT5VyxTunUeLGD+Bw==
   dependencies:
     moo "^0.5.0"
-    nearley "^2.15.1"
+    nearley "^2.16.0"
 
 minimatch@^3.0.4:
   version "3.0.4"
@@ -102,7 +102,7 @@ moo@^0.5.0:
   resolved "https://registry.yarnpkg.com/moo/-/moo-0.5.0.tgz#72f949e6735aeb27d07eb7c087ea5a70143c56e5"
   integrity sha512-AMv6iqhTEd5vT/cQlH6cammKS5ekyHhyqTRKi5zKMWl1RTyFnQ3ohPSBNSm8ySe2wlxSKwDonr9D5ZT44mdO3g==
 
-nearley@^2.15.1:
+nearley@^2.16.0:
   version "2.16.0"
   resolved "https://registry.yarnpkg.com/nearley/-/nearley-2.16.0.tgz#77c297d041941d268290ec84b739d0ee297e83a7"
   integrity sha512-Tr9XD3Vt/EujXbZBv6UAHYoLUSMQAxSsTnm9K3koXzjzNWY195NqALeyrzLZBKzAkL3gl92BcSogqrHjD8QuUg==
@@ -125,10 +125,10 @@ path-is-absolute@^1.0.0:
   resolved "https://registry.yarnpkg.com/path-is-absolute/-/path-is-absolute-1.0.1.tgz#174b9268735534ffbc7ace6bf53a5a9e1b5c5f5f"
   integrity sha1-F0uSaHNVNP+8es5r9TpanhtcX18=
 
-prettier@^1.16.0:
-  version "1.16.0"
-  resolved "https://registry.yarnpkg.com/prettier/-/prettier-1.16.0.tgz#104dd25f5ee3d0c9d0a6ce4bb40ced8481d51219"
-  integrity sha512-MCBCYeAuZfejUPdEpkleLWvpRBwLii/Sp5jQs0eb8Ul/drGIDjkL6tAU24tk6yCGf0KPV5rhPPPlczfBmN2pWQ==
+prettier@^1.16.1:
+  version "1.16.1"
+  resolved "https://registry.yarnpkg.com/prettier/-/prettier-1.16.1.tgz#534c2c9d7853f8845e5e078384e71973bd74089f"
+  integrity sha512-XXUITwIkGb3CPJ2hforHah/zTINRyie5006Jd2HKy2qz7snEJXl0KLfsJZW/wst9g6R2rFvqba3VpNYdu1hDcA==
 
 railroad-diagrams@^1.0.0:
   version "1.0.0"

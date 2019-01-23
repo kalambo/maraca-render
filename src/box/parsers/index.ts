@@ -27,8 +27,8 @@ export default {
   width: (s = '') => {
     const result = {} as any;
     split(s).forEach(p => {
-      if (['left', 'center', 'right'].includes(p)) {
-        result.hAlign = p;
+      if (['left', 'middle', 'right'].includes(p)) {
+        result.hAlign = p === 'middle' ? 'center' : p;
       } else if (isNumber(p)) {
         const n = parseFloat(p);
         if (n <= 1) result.width = `${n * 100}%`;
@@ -41,15 +41,15 @@ export default {
   height: (s = '') => {
     const result = {} as any;
     split(s).forEach(p => {
-      if (['top', 'center', 'bottom'].includes(p)) {
-        result.vAlign = p === 'center' ? 'middle' : p;
+      if (['top', 'middle', 'bottom'].includes(p)) {
+        result.vAlign = p;
       } else if (isNumber(p)) {
         const n = parseFloat(p);
         if (n <= 1) result.height = `${n * 100}%`;
         else result.height = `${n}px`;
       }
     });
-    if (result.height) result.vAlign = result.vAlign || 'center';
+    if (result.height) result.vAlign = result.vAlign || 'middle';
     return result;
   },
   style: (s = '') => {

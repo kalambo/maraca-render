@@ -35,13 +35,16 @@ export const boxConfig = {
   fill: 'string',
   pad: 'string',
   round: 'string',
+  click: true,
 };
 export const boxInfo = values => ({
   pad: parsers.dirs(values.pad),
   props: {
     style: {
+      overflow: 'hidden',
       background: parsers.color(values.fill),
       borderRadius: toPx(parsers.dirs(values.round)),
+      ...(values.click ? { cursor: 'pointer' } : {}),
     },
   },
 });

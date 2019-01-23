@@ -1,6 +1,8 @@
 import { toTypedValue } from 'maraca';
+import * as prettier from 'prettier/standalone';
 
 export { default as dom } from './dom';
+import * as printMaraca from './print';
 export { default as update } from './update';
 
 export const isNumber = x => !isNaN(x) && !isNaN(parseFloat(x));
@@ -142,3 +144,23 @@ export const valueComponents = {
     return node;
   },
 };
+
+const print = value => {
+  if (value.type !== 'list') return `"${value.value || ''}"`;
+  return `[${[
+    ...Object.keys(value.value.values).map(
+      k =>
+        `${print(value.value.values[k].key)}: ${print(
+          value.value.values[k].value,
+        )}`,
+    ),
+    ...value.value.indices.map(print),
+  ].join(', ')}]`;
+};
+
+export const printValue = (value, printWidth?) =>
+  prettier.format(print(value), {
+    parser: 'maraca',
+    plugins: [printMaraca],
+    printWidth: Math.min(80, printWidth || 40),
+  });
