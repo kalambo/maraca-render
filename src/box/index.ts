@@ -1,3 +1,5 @@
+export { updateBox } from './components';
+
 import { getValues, update, valueComponents } from '../utils';
 
 import boxComponents from './components';

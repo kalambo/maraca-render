@@ -3,6 +3,7 @@ import { toData } from 'maraca';
 import {
   applyObj,
   createNode,
+  createTextNode,
   findChild,
   getChildren,
   getSetters,
@@ -24,28 +25,43 @@ import parsers from './parsers';
 import { padNode, padText } from './pad';
 import updateSize from './size';
 
+export const updateBox = (node, values, context, content, innerProps = {}) => {
+  const vals = getValues(values, { ...textConfig, ...boxConfig });
+  const text = textInfo(vals, context);
+  const inner = (node && findChild(node, 2)) || createNode('div');
+  content(inner, text.info);
+  update.props(inner, mergeObjs(text.props, innerProps));
+  const outer = node || createNode(inner, 2);
+  padText(inner, text.pad);
+  const box = boxInfo(vals);
+  const size = updateSize(outer, values, context, false);
+  update.props(
+    outer,
+    mergeObjs(box.props, size.props),
+    getSetters(values, boxSetters.config, boxSetters.setters),
+  );
+  const [top, right, bottom, left] = box.pad || ([] as any);
+  padNode(inner, 'pad', { top, right, bottom, left });
+  return outer;
+};
+
 export default {
-  print: (node, values, _, context) => {
-    const inner = (node && findChild(node, 2)) || createNode('span');
-    const vals = getValues(values, { ...textConfig, ...boxConfig });
-    const text = textInfo(vals, context);
-    const box = boxInfo(vals);
-    const size = updateSize(inner, values, {}, false);
-    update.props(
-      inner,
-      mergeObjs({ style: { whiteSpace: 'pre-wrap' } }, text.props, size.props),
-    );
-    inner.textContent = printValue(
-      getValues(values, { print: true }).print,
-      Math.ceil(inner.offsetWidth / (text.info.size * 0.8)),
-    );
-    const result = node || createNode(inner, 2);
-    update.props(result, box.props);
-    padText(inner.parentNode, text.pad);
-    const [top, right, bottom, left] = box.pad || ([] as any);
-    padNode(inner.parentNode, 'pad', { top, right, bottom, left });
-    return result;
-  },
+  print: (node, values, _, context) =>
+    updateBox(
+      node,
+      values,
+      context,
+      (inner, text) => {
+        const content = printValue(
+          getValues(values, { print: true }).print,
+          Math.ceil(inner.offsetWidth / (text.size * 0.8)),
+        );
+        const child = findChild(inner, 1);
+        if (!child) inner.appendChild(createTextNode(content));
+        else child.nodeValue = content;
+      },
+      { style: { whiteSpace: 'pre-wrap' } },
+    ),
   image: (node, values) => {
     const result = node || createNode('img');
     const size = updateSize(result, values, {}, false);
@@ -101,33 +117,17 @@ export default {
     update.props(result, text.props);
     return result;
   },
-  box: (node, values, indices, context, next) => {
-    const vals = getValues(values, { ...textConfig, ...boxConfig });
-    const text = textInfo(vals, context);
-    const depths = { inner: 2, child: 2 };
-    const inner = (node && findChild(node, depths.inner)) || createNode('div');
-    update.children(inner, indices, next('box', text.info), depths.child);
-    update.props(inner, text.props);
-    getChildren(inner).forEach(n => {
-      const c = findChild(n, depths.child);
-      c.parentNode.style.display =
-        c.nodeType === 3 || c.tagName === 'SPAN' ? 'inline' : 'block';
-      c.parentNode.parentNode.style.display =
-        c.nodeType === 3 || c.tagName === 'SPAN' ? 'inline' : 'block';
-    });
-    const result = node || createNode(inner, depths.inner);
-    padText(inner, text.pad);
-    const box = boxInfo(vals);
-    const size = updateSize(result, values, context, false);
-    update.props(
-      result,
-      mergeObjs(box.props, size.props),
-      getSetters(values, boxSetters.config, boxSetters.setters),
-    );
-    const [top, right, bottom, left] = box.pad || ([] as any);
-    padNode(inner, 'pad', { top, right, bottom, left });
-    return result;
-  },
+  box: (node, values, indices, context, next) =>
+    updateBox(node, values, context, (inner, text) => {
+      update.children(inner, indices, next('box', text), 2);
+      getChildren(inner).forEach(n => {
+        const c = findChild(n, 2);
+        c.parentNode.style.display =
+          c.nodeType === 3 || c.tagName === 'SPAN' ? 'inline' : 'block';
+        c.parentNode.parentNode.style.display =
+          c.nodeType === 3 || c.tagName === 'SPAN' ? 'inline' : 'block';
+      });
+    }),
   cols: (node, values, indices, context, next) => {
     if (node) {
       [...node.childNodes].forEach(n => {

@@ -40,9 +40,6 @@ const printConfig = (path, print, config) => {
         concat([':', indentBreak(line, path.call(print, 'args', '0'))]),
       );
     }
-    if (config.args[0].type === 'nil') {
-      return concat([path.call(print, 'args', '1'), ': ']);
-    }
     return group(
       concat([
         path.call(print, 'args', '1'),
@@ -60,11 +57,18 @@ const printConfig = (path, print, config) => {
             softline,
             join(
               concat([',', line]),
-              path.map(p => {
-                const c = p.getValue();
-                if (c.type === 'nil') return '';
-                return print(p);
-              }, 'values'),
+              path
+                .map(p => {
+                  const c = p.getValue();
+                  if (
+                    c.type === 'nil' ||
+                    (c.type === 'assign' && c.args[0].type === 'nil')
+                  ) {
+                    return null;
+                  }
+                  return print(p);
+                }, 'values')
+                .filter(x => x),
             ),
           ]),
         ),

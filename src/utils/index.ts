@@ -20,7 +20,7 @@ export const toNumber = s => (isNumber(s) ? parseFloat(s) : 0);
 
 export const split = s => (s || '').split(/\s+/).filter(v => v);
 
-const createTextNode = text => {
+export const createTextNode = text => {
   const result = document.createTextNode(text);
   (result as any).__maraca = true;
   return result;
@@ -146,7 +146,9 @@ export const valueComponents = {
 };
 
 const print = value => {
-  if (value.type !== 'list') return `"${value.value || ''}"`;
+  if (value.type !== 'list') {
+    return `"${(value.value || '').replace(/"/g, '""')}"`;
+  }
   return `[${[
     ...Object.keys(value.value.values).map(
       k =>
