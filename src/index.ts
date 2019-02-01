@@ -4,11 +4,12 @@ export { default as box, updateBox } from './box';
 export { createNode, dom, getSetters, getValues, parseValue } from './utils';
 
 export default (render, node) => data => {
-  const scroll = window.scrollY;
+  const child = node.childNodes[0];
+  const scroll = child && child.scrollY;
   update.children(
     node,
     [{ type: 'list', value: { indices: [data], values: {} } }],
     render,
   );
-  window.scrollTo(0, scroll);
+  if (child) child.scrollTo(0, scroll);
 };

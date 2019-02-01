@@ -1,4 +1,4 @@
-import { toTypedValue } from 'maraca';
+import { compare, toData, toTypedValue } from 'maraca';
 import * as prettier from 'prettier/standalone';
 
 export { default as dom } from './dom';
@@ -150,14 +150,18 @@ const print = value => {
     return `"${(value.value || '').replace(/"/g, '""')}"`;
   }
   return `[${[
-    ...Object.keys(value.value.values).map(
-      k =>
-        `${print(value.value.values[k].key)}: ${print(
-          value.value.values[k].value,
-        )}`,
-    ),
-    ...value.value.indices.map(print),
-  ].join(', ')}]`;
+    ...value.value.indices.map((v, i) => ({
+      index: true,
+      key: toData(i + 1),
+      value: v,
+    })),
+    ...Object.keys(value.value.values).map(k => value.value.values[k]),
+  ]
+    .sort((a, b) => compare(a.key, b.key))
+    .map(({ index, key, value }) =>
+      index ? print(value) : `${print(key)}: ${print(value)}`,
+    )
+    .join(', ')}]`;
 };
 
 export const printValue = (value, printWidth?) =>
