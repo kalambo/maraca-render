@@ -8,7 +8,12 @@ export default (render, node) => data => {
   const scroll = child && child.scrollY;
   update.children(
     node,
-    [{ type: 'list', value: { indices: [data], values: {} } }],
+    [
+      {
+        type: 'list',
+        value: { indices: data.type === 'nil' ? [] : [data], values: {} },
+      },
+    ],
     render,
   );
   if (child) child.scrollTo(0, scroll);
