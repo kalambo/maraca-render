@@ -3,13 +3,11 @@ import { toData } from 'maraca';
 import {
   applyObj,
   createNode,
-  createTextNode,
   findChild,
   getChildren,
   getSetters,
   getValues,
   mergeObjs,
-  printValue,
   update,
 } from '../utils';
 
@@ -46,22 +44,6 @@ export const updateBox = (node, values, context, content, innerProps = {}) => {
 };
 
 export default {
-  print: (node, values, _, context) =>
-    updateBox(
-      node,
-      values,
-      context,
-      (inner, text) => {
-        const content = printValue(
-          getValues(values, { print: true }).print,
-          Math.ceil(inner.offsetWidth / (text.size * 0.8)),
-        );
-        const child = findChild(inner, 1);
-        if (!child) inner.appendChild(createTextNode(content));
-        else child.nodeValue = content;
-      },
-      { style: { whiteSpace: 'pre-wrap' } },
-    ),
   image: (node, values) => {
     const result = node || createNode('img');
     const size = updateSize(result, values, {}, false);
