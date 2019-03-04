@@ -1,4 +1,4 @@
-import { toTypedValue } from 'maraca';
+import { toJs } from 'maraca';
 
 export { default as dom } from './dom';
 export { default as update } from './update';
@@ -101,12 +101,18 @@ export const parseValue = (config, data) => {
   }
   if (config === true) return data;
   const { type, value } = data;
-  if (config === 'boolean') return type !== 'nil';
+  if (config === 'boolean') return !!type.value;
   if (config === 'string') return type === 'value' && value;
-  if (['integer', 'number', 'time', 'location'].includes(config)) {
-    const typed = toTypedValue(data);
-    if (config !== 'integer') return typed.type === config && typed.value;
-    else return typed.integer && typed.value;
+  const v = data.type !== 'list' ? toJs(data) : null;
+  if (['integer', 'number'].includes(config)) {
+    if (typeof v !== 'number') return false;
+    return (config === 'number' || Math.floor(v) === v) && v;
+  }
+  if (config === 'date') {
+    return Object.prototype.toString.call(v) !== '[object Date]' && v;
+  }
+  if (config === 'location') {
+    return typeof v === 'object' && v;
   }
   return null;
 };
@@ -114,7 +120,7 @@ export const parseValue = (config, data) => {
 export const getValues = (values, config, map?) => {
   const result = Object.keys(config).reduce((res, k) => {
     if (values[k]) {
-      const result = parseValue(config[k], values[k].value);
+      const result = parseValue(config[k], values[k]);
       if (result) return { ...res, [k]: result };
     }
     return res;
@@ -126,19 +132,33 @@ export const getSetters = (values, config, setters) =>
   [
     getValues(values, config),
     Object.keys(setters).reduce((res, k) => {
-      if (values[k] && values[k].value.set) {
-        return { ...res, [k]: values[k].value.set };
+      if (values[k] && values[k].set) {
+        return { ...res, [k]: values[k].set };
       }
       return res;
     }, {}),
     setters,
   ] as [any, any, any];
 
-export const valueComponents = {
-  nil: () => null,
-  value: (node, data) => {
-    if (!node) return createTextNode(data.value);
-    node.nodeValue = data.value;
-    return node;
-  },
+export const valueComponent = (node, data) => {
+  if (!data.value) return null;
+  if (!node) return createTextNode(data.value);
+  node.nodeValue = data.value;
+  return node;
+};
+
+const toIndex = (v: string) => {
+  const n = parseFloat(v);
+  return !isNaN(v as any) && !isNaN(n) && n === Math.floor(n) && n > 0 && n;
+};
+export const unpackList = data => {
+  const result = { values: {}, indices: [] as any[] };
+  data.forEach(({ key, value }) => {
+    if (key.type !== 'list') {
+      const i = toIndex(key.value || '');
+      if (i) result.indices[i - 1] = value;
+      else result.values[key.value || ''] = value;
+    }
+  });
+  return result;
 };

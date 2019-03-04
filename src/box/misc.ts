@@ -1,4 +1,4 @@
-import { toData } from 'maraca';
+import { fromJs } from 'maraca';
 
 import parsers from './parsers';
 
@@ -52,17 +52,17 @@ export const boxInfo = values => ({
 export const boxSetters = {
   setters: {
     hover: set => ({
-      onmouseenter: set && (() => set(toData(true))),
-      onmouseleave: set && (() => set(toData(false))),
+      onmouseenter: set && (() => set(fromJs(true))),
+      onmouseleave: set && (() => set(fromJs(false))),
     }),
     click: (set, values) => ({
-      onmousedown: set && (() => set(values().value || toData(null))),
+      onmousedown: set && (() => set(values().value || fromJs(null))),
     }),
     enter: (set, values) => ({
       onkeypress:
         set &&
         (e => {
-          if (e.keyCode === 13) set(values().value || toData(null));
+          if (e.keyCode === 13) set(values().value || fromJs(null));
         }),
     }),
   },

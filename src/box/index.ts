@@ -1,6 +1,6 @@
 export { updateBox } from './components';
 
-import { getValues, update, valueComponents } from '../utils';
+import { getValues, unpackList, update, valueComponent } from '../utils';
 
 import boxComponents from './components';
 import parsers from './parsers';
@@ -16,10 +16,10 @@ const getBoxComp = (mode, vals, indices) => {
   return 'box';
 };
 
-export default components => {
+export default (components = {}) => {
   const getComp = (mode, data) => {
-    if (data.type !== 'list') return [valueComponents[data.type], () => [data]];
-    const { values, indices } = data.value;
+    if (data.type === 'value') return [valueComponent, () => [data]];
+    const { values, indices } = unpackList(data.value);
     return getValues(
       values,
       {
@@ -50,7 +50,7 @@ export default components => {
     if (cols === 1 || (cols && comp !== boxComponents.box)) {
       return update.components(node, boxComponents.box, [
         {},
-        [{ type: 'nil' }],
+        [{ type: 'value', value: '' }],
         context,
         (_, c) => n => update.components(n, comp, args(c)),
       ]);

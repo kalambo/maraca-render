@@ -1,4 +1,4 @@
-import { toData } from 'maraca';
+import { fromJs } from 'maraca';
 
 import {
   applyObj,
@@ -73,11 +73,11 @@ export default {
       ),
       getSetters(values, boxSetters.config, {
         input: set => ({
-          oninput: set && (e => set(toData(e.target.value))),
+          oninput: set && (e => set(fromJs(e.target.value))),
         }),
         focus: set => ({
-          onfocus: set && (() => set(toData(true))),
-          onblur: set && (() => set(toData(false))),
+          onfocus: set && (() => set(fromJs(true))),
+          onblur: set && (() => set(fromJs(false))),
         }),
       }),
     );
@@ -94,9 +94,15 @@ export default {
   },
   text: (node, values, indices, context, next) => {
     const result = node || createNode('span');
-    const text = textInfo(getValues(values, textConfig), context);
+    const vals = getValues(values, { ...textConfig, ...boxConfig });
+    const text = textInfo(vals, context);
+    const box = boxInfo(vals);
     update.children(result, indices, next('text', text.info));
-    update.props(result, text.props);
+    update.props(
+      result,
+      mergeObjs(box.props, text.props),
+      getSetters(values, boxSetters.config, boxSetters.setters),
+    );
     return result;
   },
   box: (node, values, indices, context, next) =>
@@ -130,7 +136,11 @@ export default {
     update.children(
       result,
       indices,
-      next('box', { ...text.info, width: equal && `${100 / cols}%` }, cols),
+      next(
+        'box',
+        { ...text.info, width: equal && `${100 / cols}%`, colsParent: true },
+        cols,
+      ),
       0,
       cols,
     );
