@@ -77,10 +77,10 @@ lodash.throttle@^4.1.1:
   resolved "https://registry.yarnpkg.com/lodash.throttle/-/lodash.throttle-4.1.1.tgz#c23e91b710242ac70c37f1e1cda9274cc39bf2f4"
   integrity sha1-wj6RtxAkKscMN/HhzaknTMOb8vQ=
 
-maraca@^0.4.0:
-  version "0.4.0"
-  resolved "https://registry.yarnpkg.com/maraca/-/maraca-0.4.0.tgz#4169195e4414166b73a03d7863aab9c18053a11d"
-  integrity sha512-ugLY+TKJNK1HAOGV11fWJWvtM2Q0vsHoC3jVQJqSkd0B2+KWqasacZB9Qy3/H/MNefWmbljexXjh6ANwTuMT4A==
+maraca@^0.4.1:
+  version "0.4.1"
+  resolved "https://registry.yarnpkg.com/maraca/-/maraca-0.4.1.tgz#8a962ecb2cd48d90017cd70ac14855e6cb7a738c"
+  integrity sha512-YP7uZsXJ7eOen/GIlIRSORzbc719QIKISudzQqkUvwbnKyHCZJCkGYc/5bWmEsyQkNZSwCwK6b+Q4oANiEUFfw==
   dependencies:
     moo "^0.5.0"
     nearley "^2.16.0"

@@ -1,6 +1,6 @@
 import { toJs } from 'maraca';
 
-export { default as dom } from './dom';
+export { default as html } from './html';
 export { default as update } from './update';
 
 export const isNumber = x => !isNaN(x) && !isNaN(parseFloat(x));

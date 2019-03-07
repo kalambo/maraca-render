@@ -8,7 +8,6 @@ import parsers from './parsers';
 const getBoxComp = (mode, vals, indices) => {
   if (mode === 'box' && vals[''] === 'text') return 'text';
   if (mode === 'text' && vals[''] !== 'box') return 'text';
-  if (vals.print) return 'print';
   if (vals.image) return 'image';
   if (vals.input && vals.input.set) return 'input';
   const { cols } = parsers.cols(vals.cols, indices.length);
