@@ -33,7 +33,7 @@ const createElem = (tag, child?) => {
 
 export const createNode = (child, depth = 0) =>
   Array.from({ length: depth }).reduce(
-    (res, _) => createElem('div', res),
+    res => createElem('div', res),
     typeof child === 'string' ? createElem(child) : child,
   );
 
@@ -42,6 +42,16 @@ export const getChildren = node =>
 
 export const findChild = (node, depth) =>
   Array.from({ length: depth }).reduce(res => res && getChildren(res)[0], node);
+
+export const extendNode = (parent, depth) => {
+  const result = parent || createNode('div');
+  const child = Array.from({ length: depth }).reduce(res => {
+    const next = findChild(res, 1) || createElem('div');
+    res.appendChild(next);
+    return next;
+  }, result);
+  return [result, child];
+};
 
 export const cleanObj = obj =>
   Object.keys(obj).reduce(

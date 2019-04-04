@@ -3,6 +3,7 @@ import { fromJs } from 'maraca';
 import {
   applyObj,
   createNode,
+  extendNode,
   findChild,
   getChildren,
   getSetters,
@@ -26,10 +27,9 @@ import updateSize from './size';
 export const updateBox = (node, values, context, content, innerProps = {}) => {
   const vals = getValues(values, { ...textConfig, ...boxConfig });
   const text = textInfo(vals, context);
-  const inner = (node && findChild(node, 2)) || createNode('div');
+  const [outer, inner] = extendNode(node, 2);
   content(inner, text.info);
   update.props(inner, mergeObjs(text.props, innerProps));
-  const outer = node || createNode(inner, 2);
   padText(inner, text.pad);
   const box = boxInfo(vals);
   const size = updateSize(outer, values, context, false);
