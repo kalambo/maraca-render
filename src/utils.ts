@@ -1,8 +1,5 @@
 import { toJs } from 'maraca';
 
-export { default as html } from './html';
-export { default as update } from './update';
-
 export const isNumber = x => !isNaN(x) && !isNaN(parseFloat(x));
 
 export const isInteger = x => {
@@ -15,6 +12,12 @@ export const isObject = x =>
   Object.prototype.toString.call(x) === '[object Object]';
 
 export const toNumber = s => (isNumber(s) ? parseFloat(s) : 0);
+
+export const toPx = s => {
+  if (!s) return null;
+  if (!Array.isArray(s)) return `${s}px`;
+  return s.map(x => toPx(x || '0')).join(' ');
+};
 
 export const split = s => (s || '').split(/\s+/).filter(v => v);
 
@@ -31,26 +34,19 @@ const createElem = (tag, child?) => {
   return result;
 };
 
-export const createNode = (child, depth = 0) =>
-  Array.from({ length: depth }).reduce(
-    res => createElem('div', res),
-    typeof child === 'string' ? createElem(child) : child,
-  );
-
 export const getChildren = node =>
   node && ([] as any).slice.call(node.childNodes).filter(c => c.__maraca);
 
 export const findChild = (node, depth) =>
   Array.from({ length: depth }).reduce(res => res && getChildren(res)[0], node);
 
-export const extendNode = (parent, depth) => {
-  const result = parent || createNode('div');
-  const child = Array.from({ length: depth }).reduce(res => {
-    const next = findChild(res, 1) || createElem('div');
-    res.appendChild(next);
-    return next;
-  }, result);
-  return [result, child];
+export const createNodes: any = (base, ...nodes) => {
+  const result = [typeof base === 'string' ? createElem(base) : base];
+  nodes.forEach((n, i) => {
+    result.push(typeof n === 'string' ? createElem(n) : n);
+    result[i].appendChild(result[i + 1]);
+  });
+  return result;
 };
 
 export const cleanObj = obj =>
@@ -62,14 +58,14 @@ export const cleanObj = obj =>
     {},
   );
 
-export const mergeObjs = (...objs) =>
+export const mergeObjs = (objs: any[]) =>
   objs.reduce((a, b) =>
     Array.from(new Set([...Object.keys(a), ...Object.keys(b)])).reduce(
       (res, k) => ({
         ...res,
         [k]:
           isObject(a[k]) && isObject(b[k])
-            ? mergeObjs(a[k], b[k])
+            ? mergeObjs([a[k], b[k]])
             : b[k] === undefined
             ? a[k]
             : b[k],
@@ -103,7 +99,10 @@ export const applyObj = (target, obj) => {
   return target;
 };
 
-export const parseValue = (config, data) => {
+export const parseValue = (
+  config,
+  data = { type: 'value', value: '' } as any,
+) => {
   if (!config) return null;
   if (typeof config === 'object') {
     if (data.type !== 'list') return {};
@@ -111,9 +110,9 @@ export const parseValue = (config, data) => {
   }
   if (config === true) return data;
   const { type, value } = data;
-  if (config === 'boolean') return !!type.value;
+  if (config === 'boolean') return !!value;
   if (config === 'string') return type === 'value' && value;
-  const v = data.type !== 'list' ? toJs(data) : null;
+  const v = type !== 'list' ? toJs(data) : null;
   if (['integer', 'number'].includes(config)) {
     if (typeof v !== 'number') return false;
     return (config === 'number' || Math.floor(v) === v) && v;
@@ -138,24 +137,13 @@ export const getValues = (values, config, map?) => {
   return map ? map(result) : result;
 };
 
-export const getSetters = (values, config, setters) =>
-  [
-    getValues(values, config),
-    Object.keys(setters).reduce((res, k) => {
-      if (values[k] && values[k].set) {
-        return { ...res, [k]: values[k].set };
-      }
-      return res;
-    }, {}),
-    setters,
-  ] as [any, any, any];
-
-export const valueComponent = (node, data) => {
-  if (!data.value) return null;
-  if (!node) return createTextNode(data.value);
-  node.nodeValue = data.value;
-  return node;
-};
+export const getSetters = (values, setters) =>
+  setters.reduce((res, k) => {
+    if (values[k] && values[k].set) {
+      return { ...res, [k]: values[k].set };
+    }
+    return res;
+  }, {});
 
 const toIndex = (v: string) => {
   const n = parseFloat(v);
@@ -171,4 +159,22 @@ export const unpackList = data => {
     }
   });
   return result;
+};
+
+export const wrapMethods = () => {
+  const base = {};
+  const wrapped = {};
+  return obj => {
+    const result = {};
+    Object.keys(obj).forEach(k => {
+      if (typeof obj[k] === 'function') {
+        base[k] = obj[k];
+        wrapped[k] = wrapped[k] || ((...args) => base[k](...args));
+        result[k] = wrapped[k];
+      } else {
+        result[k] = obj[k];
+      }
+    });
+    return result;
+  };
 };

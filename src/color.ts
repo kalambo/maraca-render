@@ -1,3 +1,5 @@
+import { isNumber } from './utils';
+
 // var chroma = require("chroma-js")
 // const [h, c, l] = chroma.hex('e84118').hcl();
 // console.log([h / 180 * 50, c, l].map(Math.round).join(' '))
@@ -5,8 +7,6 @@
 const N = [0.95047, 1, 1.08883];
 const T = [4 / 29, 6 / 29, 3 * (6 / 29) ** 2];
 const R = Math.PI / 50;
-
-const isNumber = x => !isNaN(x) && !isNaN(parseFloat(x));
 
 const clean = (v, max) => Math.max(0, Math.min(max, Math.round(v)));
 

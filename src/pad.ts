@@ -1,12 +1,8 @@
-import { getChildren } from '../utils';
+import { getChildren } from './utils';
 
-export const padNode = (
-  node,
-  key,
-  { top = 0 as any, left = 0 as any, bottom = 0 as any, right = 0 as any },
-) => {
+export const padNode = (node, key, pad) => {
   const p = (node.__pad = node.__pad || [{}, {}, {}, {}]);
-  [top, right, bottom, left].forEach((v, i) => (p[i][key] = v || 0));
+  pad.forEach((v, i) => (p[i][key] = v || 0));
   const totals = p.map(x =>
     Object.keys(x)
       .map(k => x[k])
@@ -27,16 +23,20 @@ export const padText = (node, pad) => {
       c.tagName === 'INPUT' ||
       c.style.display === 'inline',
   );
-  padNode(node, 'textParent', {
-    top: inline[0] && Math.floor(pad),
-    bottom: inline[children.length - 1] && Math.ceil(pad),
-  });
+  padNode(node, 'textParent', [
+    inline[0] && Math.floor(pad),
+    0,
+    inline[children.length - 1] && Math.ceil(pad),
+    0,
+  ]);
   children.forEach((c, i) => {
     if (!inline[i]) {
-      padNode(getChildren(c)[0], 'textSibling', {
-        top: inline[i - 1] && Math.floor(pad),
-        bottom: inline[i + 1] && Math.ceil(pad),
-      });
+      padNode(getChildren(c)[0], 'textSibling', [
+        inline[i - 1] && Math.floor(pad),
+        0,
+        inline[i + 1] && Math.ceil(pad),
+        0,
+      ]);
     }
   });
 };
