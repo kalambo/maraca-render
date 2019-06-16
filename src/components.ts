@@ -55,41 +55,6 @@ const createUpdater = () => {
   };
 };
 
-const addGaps = (node, deep) => {
-  getChildren(node).forEach((child, i) => {
-    if (i !== 0) {
-      node.insertBefore(
-        applyObj(createNodes('div')[0], { __gap: true }),
-        child,
-      );
-    }
-    if (deep) addGaps(child, false);
-  });
-};
-const updateGaps = (node, getStyle, deep) => {
-  [...node.childNodes].forEach(child => {
-    applyObj(child, { style: getStyle(child.__gap, false) });
-    if (deep) updateGaps(child, gap => getStyle(gap, true), false);
-  });
-};
-const removeGaps = (node, deep) => {
-  [...node.childNodes].forEach(n => {
-    if (n.__gap) node.removeChild(n);
-    else if (deep) removeGaps(n, false);
-  });
-};
-const createGapUpdater = (deep = false) => {
-  let prev = false;
-  return (node, gap, getStyle) => {
-    if (prev !== !!gap) {
-      if (gap) addGaps(node, deep);
-      else removeGaps(node, deep);
-    }
-    updateGaps(node, getStyle, deep);
-    prev = !!gap;
-  };
-};
-
 export default {
   text: () => {
     const [node] = createNodes('span');
@@ -134,6 +99,7 @@ export default {
       update: info => {
         innerUpdater(inner, { type: 'text' }, info.text.props, info.input);
         nodeUpdater(node, info.box.props);
+        if (info.focus) setTimeout(() => inner.focus());
         padText(middle, info.text.pad);
         padNode(middle, 'pad', info.box.pad);
       },
@@ -162,13 +128,22 @@ export default {
         const size = sizer(node, info.size);
         nodeUpdater(node, info.box.props, {
           style: {
-            width: info.parent === 'cols' ? size.width : '100%',
+            width: ['left', 'right'].includes(size.xAlign) ? 'auto' : '100%',
             maxWidth: size.width,
             height: size.height,
+            float:
+              size.xAlign === 'left' || size.xAlign === 'right'
+                ? size.xAlign
+                : 'none',
             marginLeft: size.xAlign !== 'left' ? 'auto' : '',
             marginRight: size.xAlign !== 'right' ? 'auto' : '',
           },
         });
+        node.__info = {
+          fill: info.box.props.style.background,
+          width: size.width,
+          yAlign: size.yAlign,
+        };
       },
       destroy: () => destroy && destroy(),
     };
@@ -177,60 +152,86 @@ export default {
     const [node] = createNodes('div');
     const sizer = createSizer();
     const updater = createUpdater();
-    const gapUpdater = createGapUpdater(true);
     let destroy;
     return {
       node,
       update: (info, indices, next) => {
-        destroy = updateChildren(node, indices, next, 0, info.cols.cols);
+        destroy = updateChildren(node, indices, next, 2, info.cols.cols, true);
         const size = sizer(node, info.size);
         updater(node, info.text.props, info.box.props, {
           style: {
             display: 'table',
             tableLayout: 'fixed',
             padding: toPx(info.box.pad),
-            width: !size.width && size.xAlign ? 'auto' : '100%',
+            width: ['left', 'right'].includes(size.xAlign) ? 'auto' : '100%',
             maxWidth: size.width,
             height: size.height,
+            float:
+              size.xAlign === 'left' || size.xAlign === 'right'
+                ? size.xAlign
+                : 'none',
             marginLeft: size.xAlign !== 'left' ? 'auto' : '',
             marginRight: size.xAlign !== 'right' ? 'auto' : '',
           },
         });
-        gapUpdater(node, info.gap, (gap, deep) =>
-          !deep
-            ? {
-                display: 'table-row',
-                ...(gap ? { height: toPx(info.gap[0]) } : {}),
-              }
-            : {
+        node.__info = {
+          fill: info.box.props.style.background,
+          width: size.width,
+          yAlign: size.yAlign,
+        };
+        const gap = info.gap || ['0', '0'];
+        getChildren(node).forEach((row, i) => {
+          applyObj(row, {
+            style: {
+              display: 'table-row',
+              ...(i % 2 === 1 ? { height: toPx(gap[0]) } : {}),
+            },
+          });
+          getChildren(row).forEach((cell, j) => {
+            const child = getChildren(cell)[0];
+            applyObj(cell, {
+              style: {
                 display: 'table-cell',
-                verticalAlign: size.yAlign,
-                ...(gap ? { width: toPx(info.gap[1]) } : {}),
+                background:
+                  (child && child.__info && child.__info.fill) || 'none',
+                width: (child && child.__info && child.__info.width) || 'auto',
+                verticalAlign:
+                  (child && child.__info && child.__info.yAlign) || 'top',
+                ...(j % 2 === 1 ? { width: toPx(gap[1]) } : {}),
               },
-        );
+            });
+          });
+        });
       },
       destroy: () => destroy && destroy(),
     };
   },
   row: () => {
     const [node] = createNodes('div');
-    const sizer = createSizer();
     const updater = createUpdater();
-    const gapUpdater = createGapUpdater();
     let destroy;
     return {
       node,
       update: (info, indices, next) => {
-        destroy = updateChildren(node, indices, next);
-        const size = sizer(node, info.size);
+        destroy = updateChildren(node, indices, next, 0, 0, true);
         updater(node, info.text.props, info.box.props, {
           style: { display: 'table-row' },
         });
-        gapUpdater(node, info.gap, gap => ({
-          display: 'table-cell',
-          verticalAlign: size.yAlign,
-          ...(gap ? { width: toPx(info.gap[1]) } : {}),
-        }));
+        const gap = info.gap || ['0', '0'];
+        getChildren(node).forEach((cell, j) => {
+          const child = getChildren(cell)[0];
+          applyObj(cell, {
+            style: {
+              display: 'table-cell',
+              background:
+                (child && child.__info && child.__info.fill) || 'none',
+              width: (child && child.__info && child.__info.width) || 'auto',
+              verticalAlign:
+                (child && child.__info && child.__info.yAlign) || 'top',
+              ...(j % 2 === 1 ? { width: toPx(gap[1]) } : {}),
+            },
+          });
+        });
       },
       destroy: () => destroy && destroy(),
     };
@@ -239,29 +240,42 @@ export default {
     const [node] = createNodes('div');
     const sizer = createSizer();
     const updater = createUpdater();
-    const gapUpdater = createGapUpdater();
     let destroy;
     return {
       node,
       update: (info, indices, next) => {
-        destroy = updateChildren(node, indices, next);
+        destroy = updateChildren(node, indices, next, 0, 0, true);
         const size = sizer(node, info.size);
         updater(node, info.text.props, info.box.props, {
           style: {
             display: 'table',
             tableLayout: 'fixed',
             padding: toPx(info.box.pad),
-            width: !size.width && size.xAlign ? 'auto' : '100%',
+            width: ['left', 'right'].includes(size.xAlign) ? 'auto' : '100%',
             maxWidth: size.width,
             height: size.height,
+            float:
+              size.xAlign === 'left' || size.xAlign === 'right'
+                ? size.xAlign
+                : 'none',
             marginLeft: size.xAlign !== 'left' ? 'auto' : '',
             marginRight: size.xAlign !== 'right' ? 'auto' : '',
           },
         });
-        gapUpdater(node, info.gap, gap => ({
-          display: 'table-row',
-          ...(gap ? { height: toPx(info.gap[0]) } : {}),
-        }));
+        node.__info = {
+          fill: info.box.props.style.background,
+          width: size.width,
+          yAlign: size.yAlign,
+        };
+        const gap = info.gap || ['0', '0'];
+        getChildren(node).forEach((row, i) => {
+          applyObj(row, {
+            style: {
+              display: 'table-row',
+              ...(i % 2 === 1 ? { height: toPx(gap[0]) } : {}),
+            },
+          });
+        });
       },
       destroy: () => destroy && destroy(),
     };

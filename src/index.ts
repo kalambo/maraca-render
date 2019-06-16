@@ -22,6 +22,10 @@ const getComponentNode = (node, component, args) => {
   result.node.__component = component;
   result.node.__update = result.update;
   result.node.__destroy = result.destroy;
+  const boxComp = Object.keys(boxComponents).find(
+    k => boxComponents[k] === component,
+  );
+  if (boxComp) result.node.dataset.component = boxComp;
   return result.node;
 };
 
@@ -51,27 +55,37 @@ const createUpdater = (components = {}) => {
       return [components[tag], values, indices, updateNode(context)];
     }
     const parsed = parse(values, indices, context);
+    const boxComp = getBoxComp(parsed.info, context);
     return [
-      boxComponents[getBoxComp(parsed.info, context)],
+      boxComponents[boxComp],
       parsed.info,
       indices,
-      updateNode(parsed.context),
+      updateNode({ ...parsed.context, parentComp: boxComp }),
     ];
   };
 
   const updateNode = context => (node, data) => {
     const [comp, ...args] = getComp(data, context);
-    if (context.next) {
-      if (context.force || comp !== boxComponents[context.next]) {
-        const parsed = parse({}, [], context);
-        return updateComponent(node, boxComponents[context.next], [
-          parsed.info,
+    const runUpdate = n => {
+      if (comp === null && context.parentComp !== 'box') {
+        return updateComponent(node, boxComponents.box, [
+          parse({}, [], context).info,
           [{ type: 'value', value: '' }],
-          n => updateNode(parsed.context)(n, data),
+          n => updateComponent(n, comp, args),
+        ]);
+      }
+      return updateComponent(n, comp, args);
+    };
+    if (context.next) {
+      if (comp !== boxComponents[context.next]) {
+        return updateComponent(node, boxComponents[context.next], [
+          parse({}, [], context).info,
+          [{ type: 'value', value: '' }],
+          runUpdate,
         ]);
       }
     }
-    return updateComponent(node, comp, args);
+    return runUpdate(node);
   };
 
   return updateNode({});

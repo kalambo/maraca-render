@@ -117,6 +117,7 @@ export default (values, indices, context) => {
     round: 'string',
     image: 'string',
     input: 'string',
+    focus: 'boolean',
   });
   const setters = getSetters(values, [
     'x',
@@ -136,19 +137,21 @@ export default (values, indices, context) => {
   const textHeight = setters.input ? 1.5 : lineHeight || context.height || 1.5;
 
   const cols = parseCols(vals.cols, indices.length);
+  const gap = parseDirs(vals.gap);
+  const size = {
+    ...(vals.x && !values.x.wasSet ? parseX(vals.x) : {}),
+    ...(vals.y && !values.y.wasSet ? parseY(vals.y) : {}),
+    ...(context.width ? { width: context.width } : {}),
+    setWidth: setters.x,
+    setHeight: setters.y,
+  };
 
   return {
     info: {
       flow: textFlow,
       cols,
-      gap: parseDirs(vals.gap),
-      size: {
-        ...(vals.x && !values.x.wasSet ? parseX(vals.x) : {}),
-        ...(vals.y && !values.y.wasSet ? parseY(vals.y) : {}),
-        ...(context.width ? { width: context.width } : {}),
-        setWidth: setters.x,
-        setHeight: setters.y,
-      },
+      gap,
+      size,
       image: vals.image,
       input: setters.input && {
         value: vals.input,
@@ -156,6 +159,7 @@ export default (values, indices, context) => {
         onfocus: setters.focus && (() => setters.focus(fromJs(true))),
         onblur: setters.focus && (() => setters.focus(fromJs(false))),
       },
+      focus: vals.focus,
       text: {
         pad: Math.floor(textSize * (textHeight - 1)) * -0.5,
         props: {
@@ -190,11 +194,7 @@ export default (values, indices, context) => {
       },
     },
     context: {
-      next: cols.rows
-        ? 'row'
-        : context.next === 'row' || cols.cols
-        ? 'box'
-        : null,
+      next: cols.rows ? 'row' : null,
       wrap: cols.cols === 1,
       flow: textFlow,
       size: textSize,

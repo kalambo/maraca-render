@@ -37,7 +37,7 @@ const createElem = (tag, child?) => {
 export const getChildren = node =>
   node && ([] as any).slice.call(node.childNodes).filter(c => c.__maraca);
 
-export const findChild = (node, depth) =>
+export const findChild = (node, depth): any =>
   Array.from({ length: depth }).reduce(res => res && getChildren(res)[0], node);
 
 export const createNodes: any = (base, ...nodes) => {
