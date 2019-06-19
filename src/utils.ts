@@ -49,7 +49,7 @@ export const createNodes: any = (base, ...nodes) => {
   return result;
 };
 
-export const cleanObj = obj =>
+const cleanObj = obj =>
   Object.keys(obj).reduce(
     (res, k) =>
       obj[k]
@@ -58,7 +58,7 @@ export const cleanObj = obj =>
     {},
   );
 
-export const mergeObjs = (objs: any[]) =>
+const mergeObjs = (objs: any[]) =>
   objs.reduce((a, b) =>
     Array.from(new Set([...Object.keys(a), ...Object.keys(b)])).reduce(
       (res, k) => ({
@@ -74,7 +74,7 @@ export const mergeObjs = (objs: any[]) =>
     ),
   );
 
-export const diffObjs = (next, prev) => {
+const diffObjs = (next, prev) => {
   const result = {};
   Array.from(
     new Set([...Object.keys(next), ...Object.keys(prev || {})]),
@@ -99,6 +99,16 @@ export const applyObj = (target, obj) => {
   return target;
 };
 
+export const createUpdater = () => {
+  const wrap = wrapMethods();
+  let prev;
+  return (node, ...props) => {
+    const cleaned = wrap(cleanObj(mergeObjs(props)));
+    applyObj(node, diffObjs(cleaned, prev));
+    prev = cleaned;
+  };
+};
+
 export const parseValue = (
   config,
   data = { type: 'value', value: '' } as any,
@@ -111,17 +121,17 @@ export const parseValue = (
   if (config === true) return data;
   const { type, value } = data;
   if (config === 'boolean') return !!value;
-  if (config === 'string') return type === 'value' && value;
+  if (config === 'string') return type === 'value' ? value : null;
   const v = type !== 'list' ? toJs(data) : null;
   if (['integer', 'number'].includes(config)) {
-    if (typeof v !== 'number') return false;
-    return (config === 'number' || Math.floor(v) === v) && v;
+    if (typeof v !== 'number') return null;
+    return config === 'number' ? v : Math.floor(v) === v ? v : null;
   }
   if (config === 'date') {
-    return Object.prototype.toString.call(v) !== '[object Date]' && v;
+    return Object.prototype.toString.call(v) === '[object Date]' ? v : null;
   }
   if (config === 'location') {
-    return typeof v === 'object' && v;
+    return typeof v === 'object' ? v : null;
   }
   return null;
 };
@@ -130,7 +140,7 @@ export const getValues = (values, config, map?) => {
   const result = Object.keys(config).reduce((res, k) => {
     if (values[k]) {
       const result = parseValue(config[k], values[k]);
-      if (result) return { ...res, [k]: result };
+      if (result !== null) return { ...res, [k]: result };
     }
     return res;
   }, {});

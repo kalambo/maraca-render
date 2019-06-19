@@ -6,14 +6,11 @@ import updateChildren from './children';
 import { padNode, padText } from './pad';
 import {
   applyObj,
-  cleanObj,
   createNodes,
-  diffObjs,
+  createUpdater,
   findChild,
   getChildren,
-  mergeObjs,
   toPx,
-  wrapMethods,
 } from './utils';
 
 const resizeDetector = erd({ strategy: 'scroll' });
@@ -41,17 +38,7 @@ const createSizer = () => {
         resizeDetector.removeAllListeners(node);
       }
     }
-    return info;
-  };
-};
-
-const createUpdater = () => {
-  const wrap = wrapMethods();
-  let prev;
-  return (node, ...props) => {
-    const cleaned = wrap(cleanObj(mergeObjs(props)));
-    applyObj(node, diffObjs(cleaned, prev));
-    prev = cleaned;
+    return { ...info };
   };
 };
 
@@ -77,6 +64,11 @@ export default {
       node,
       update: info => {
         const size = sizer(node, info.size);
+        if (info.table) {
+          info.table.width = size.width;
+          info.table.yAlign = size.yAlign;
+          if (size.width && size.width.endsWith('%')) delete size.width;
+        }
         updater(node, info.box.props, {
           src: info.image,
           style: {
@@ -87,6 +79,7 @@ export default {
             marginRight: size.xAlign !== 'right' ? 'auto' : '',
           },
         });
+        node.__info = info.table || {};
       },
     };
   },
@@ -102,6 +95,7 @@ export default {
         if (info.focus) setTimeout(() => inner.focus());
         padText(middle, info.text.pad);
         padNode(middle, 'pad', info.box.pad);
+        node.__info = info.table || {};
       },
     };
   },
@@ -126,6 +120,11 @@ export default {
         padText(inner, info.text.pad);
         padNode(inner, 'pad', info.box.pad);
         const size = sizer(node, info.size);
+        if (info.table) {
+          info.table.width = size.width;
+          info.table.yAlign = size.yAlign;
+          if (size.width && size.width.endsWith('%')) delete size.width;
+        }
         nodeUpdater(node, info.box.props, {
           style: {
             width: ['left', 'right'].includes(size.xAlign) ? 'auto' : '100%',
@@ -139,11 +138,7 @@ export default {
             marginRight: size.xAlign !== 'right' ? 'auto' : '',
           },
         });
-        node.__info = {
-          fill: info.box.props.style.background,
-          width: size.width,
-          yAlign: size.yAlign,
-        };
+        node.__info = info.table || {};
       },
       destroy: () => destroy && destroy(),
     };
@@ -156,12 +151,24 @@ export default {
     return {
       node,
       update: (info, indices, next) => {
-        destroy = updateChildren(node, indices, next, 2, info.cols.cols, true);
+        destroy = updateChildren(
+          node,
+          indices,
+          next,
+          2,
+          info.cols.cols || 1,
+          true,
+        );
         const size = sizer(node, info.size);
+        if (info.table) {
+          info.table.width = size.width;
+          info.table.yAlign = size.yAlign;
+          if (size.width && size.width.endsWith('%')) delete size.width;
+        }
         updater(node, info.text.props, info.box.props, {
           style: {
             display: 'table',
-            tableLayout: 'fixed',
+            tableLayout: info.gap ? 'fixed' : 'auto',
             padding: toPx(info.box.pad),
             width: ['left', 'right'].includes(size.xAlign) ? 'auto' : '100%',
             maxWidth: size.width,
@@ -174,11 +181,6 @@ export default {
             marginRight: size.xAlign !== 'right' ? 'auto' : '',
           },
         });
-        node.__info = {
-          fill: info.box.props.style.background,
-          width: size.width,
-          yAlign: size.yAlign,
-        };
         const gap = info.gap || ['0', '0'];
         getChildren(node).forEach((row, i) => {
           applyObj(row, {
@@ -194,6 +196,8 @@ export default {
                 display: 'table-cell',
                 background:
                   (child && child.__info && child.__info.fill) || 'none',
+                borderRadius:
+                  (child && child.__info && child.__info.round) || 'none',
                 width: (child && child.__info && child.__info.width) || 'auto',
                 verticalAlign:
                   (child && child.__info && child.__info.yAlign) || 'top',
@@ -202,6 +206,7 @@ export default {
             });
           });
         });
+        node.__info = info.table;
       },
       destroy: () => destroy && destroy(),
     };
@@ -225,6 +230,8 @@ export default {
               display: 'table-cell',
               background:
                 (child && child.__info && child.__info.fill) || 'none',
+              borderRadius:
+                (child && child.__info && child.__info.round) || 'none',
               width: (child && child.__info && child.__info.width) || 'auto',
               verticalAlign:
                 (child && child.__info && child.__info.yAlign) || 'top',
@@ -246,10 +253,15 @@ export default {
       update: (info, indices, next) => {
         destroy = updateChildren(node, indices, next, 0, 0, true);
         const size = sizer(node, info.size);
+        if (info.table) {
+          info.table.width = size.width;
+          info.table.yAlign = size.yAlign;
+          if (size.width && size.width.endsWith('%')) delete size.width;
+        }
         updater(node, info.text.props, info.box.props, {
           style: {
             display: 'table',
-            tableLayout: 'fixed',
+            tableLayout: info.gap ? 'fixed' : 'auto',
             padding: toPx(info.box.pad),
             width: ['left', 'right'].includes(size.xAlign) ? 'auto' : '100%',
             maxWidth: size.width,
@@ -262,11 +274,7 @@ export default {
             marginRight: size.xAlign !== 'right' ? 'auto' : '',
           },
         });
-        node.__info = {
-          fill: info.box.props.style.background,
-          width: size.width,
-          yAlign: size.yAlign,
-        };
+        node.__info = info.table || {};
         const gap = info.gap || ['0', '0'];
         getChildren(node).forEach((row, i) => {
           applyObj(row, {

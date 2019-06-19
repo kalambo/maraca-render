@@ -68,19 +68,19 @@ inflight@^1.0.4:
     wrappy "1"
 
 inherits@2:
-  version "2.0.3"
-  resolved "https://registry.yarnpkg.com/inherits/-/inherits-2.0.3.tgz#633c2c83e3da42a502f52466022480f4208261de"
-  integrity sha1-Yzwsg+PaQqUC9SRmAiSA9CCCYd4=
+  version "2.0.4"
+  resolved "https://registry.yarnpkg.com/inherits/-/inherits-2.0.4.tgz#0fa2c64f932917c3433a0ded55363aae37416b7c"
+  integrity sha512-k/vGaX4/Yla3WzyMCvTQOXYeIHvqOKtnqBduzTHpzpQZzAskKMhZ2K+EnBiSM9zGSoIFeMpXKxa4dYeZIQqewQ==
 
 lodash.throttle@^4.1.1:
   version "4.1.1"
   resolved "https://registry.yarnpkg.com/lodash.throttle/-/lodash.throttle-4.1.1.tgz#c23e91b710242ac70c37f1e1cda9274cc39bf2f4"
   integrity sha1-wj6RtxAkKscMN/HhzaknTMOb8vQ=
 
-maraca@^0.4.3:
-  version "0.4.3"
-  resolved "https://registry.yarnpkg.com/maraca/-/maraca-0.4.3.tgz#e75a9d73527bfe05168485492255fe41078f7ce9"
-  integrity sha512-VJagnm8ae7u4P+zPGJ6UeFp4tHLTGq5q1rcZr4na7bIiJw2rvQ1Tf8Lid7FSSary1YHj7con4mqqsc64ViuC2A==
+maraca@^0.4.4:
+  version "0.4.4"
+  resolved "https://registry.yarnpkg.com/maraca/-/maraca-0.4.4.tgz#9f3e570daec1ff7e7c7d67c8066eeeaf63a8d062"
+  integrity sha512-CNcnSqD5hKzCWTHNYRhBw5MnLLARpJLYPHhKLLm3YkdxyfFteLuffTlta/EDT8tS4U+AJR2J6GlB+0NASWncMw==
   dependencies:
     moo "^0.5.0"
     nearley "^2.16.0"

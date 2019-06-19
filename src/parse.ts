@@ -48,6 +48,8 @@ const parseStyle = (s = '') => {
       result.fontWeight = 'bold';
     } else if (p === 'italic') {
       result.fontStyle = 'italic';
+    } else if (p === 'strike') {
+      result.textDecoration = 'line-through';
     } else if (p === 'exact') {
       result.whiteSpace = 'pre';
     } else if (p === 'bullet') {
@@ -86,6 +88,7 @@ const parseX = (s = '') => {
     }
   });
   if (result.width) result.xAlign = result.xAlign || 'center';
+  if (!result.width) result.width = 'auto';
   return result;
 };
 
@@ -120,8 +123,8 @@ export default (values, indices, context) => {
     focus: 'boolean',
   });
   const setters = getSetters(values, [
-    'x',
-    'y',
+    'width',
+    'height',
     'hover',
     'click',
     'enter',
@@ -139,12 +142,19 @@ export default (values, indices, context) => {
   const cols = parseCols(vals.cols, indices.length);
   const gap = parseDirs(vals.gap);
   const size = {
-    ...(vals.x && !values.x.wasSet ? parseX(vals.x) : {}),
-    ...(vals.y && !values.y.wasSet ? parseY(vals.y) : {}),
+    ...parseX(vals.x),
+    ...parseY(vals.y),
     ...(context.width ? { width: context.width } : {}),
-    setWidth: setters.x,
-    setHeight: setters.y,
+    setWidth: setters.width,
+    setHeight: setters.height,
   };
+  const fill = parseColor(vals.fill);
+  const round = toPx(parseDirs(vals.round));
+
+  const inTable = ['cols', 'row', 'table'].includes(context.parentComp);
+  const tableInfo = inTable
+    ? { width: size.width, yAlign: size.yAlign, fill, round }
+    : null;
 
   return {
     info: {
@@ -174,11 +184,15 @@ export default (values, indices, context) => {
         },
       },
       box: {
-        pad: parseDirs(vals.pad) || [],
+        pad: parseDirs(vals.pad) || [0, 0, 0, 0],
         props: {
           onmouseenter: setters.hover && (() => setters.hover(fromJs(true))),
           onmouseleave: setters.hover && (() => setters.hover(fromJs(false))),
-          onmousedown: setters.click && (() => setters.click(fromJs(null))),
+          onmousedown:
+            setters.click &&
+            (e => {
+              if (e.button === 0) setters.click(fromJs(null));
+            }),
           onkeypress:
             setters.enter &&
             (e => {
@@ -186,12 +200,21 @@ export default (values, indices, context) => {
             }),
           style: {
             overflow: 'hidden',
-            background: parseColor(vals.fill),
-            borderRadius: toPx(parseDirs(vals.round)),
-            ...(setters.click ? { cursor: 'pointer' } : {}),
+            background: fill,
+            borderRadius: round,
+            ...(setters.click
+              ? {
+                  cursor: 'pointer',
+                  userSelect: 'none',
+                  WebkitUserSelect: 'none',
+                  MozUserSelect: 'none',
+                  msUserSelect: 'none',
+                }
+              : {}),
           },
         },
       },
+      table: tableInfo,
     },
     context: {
       next: cols.rows ? 'row' : null,

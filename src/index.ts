@@ -3,7 +3,8 @@ import boxComponents from './components';
 import parse from './parse';
 import { createTextNode, getValues, unpackList } from './utils';
 
-export { findChild, getSetters, getValues, parseValue } from './utils';
+export { padNode, padText } from './pad';
+export { createNodes, createUpdater, parseValue } from './utils';
 
 const getComponentNode = (node, component, args) => {
   if (node && component === node.__component) return node;
@@ -45,16 +46,16 @@ const getBoxComp = ({ flow, cols, gap, image, input }, { next }) => {
   return 'box';
 };
 
-const createUpdater = (components = {}) => {
+const createUpdater = components => {
   const getComp = (data, context) => {
     if (data.type === 'value') return [null, data.value];
     const { values, indices } = unpackList(data.value);
+    const parsed = parse(values, indices, context);
     const tag = getValues(values, { '': 'string' })[''];
     if (tag) {
       if (!components[tag]) return [null, ''];
-      return [components[tag], values, indices, updateNode(context)];
+      return [components[tag], values, indices, parsed, updateNode(context)];
     }
-    const parsed = parse(values, indices, context);
     const boxComp = getBoxComp(parsed.info, context);
     return [
       boxComponents[boxComp],
@@ -65,9 +66,13 @@ const createUpdater = (components = {}) => {
   };
 
   const updateNode = context => (node, data) => {
+    if (node && node.__data === data) return node;
     const [comp, ...args] = getComp(data, context);
     const runUpdate = n => {
-      if (comp === null && context.parentComp !== 'box') {
+      if (
+        (comp === null && !['text', 'box'].includes(context.parentComp)) ||
+        (comp === 'text' && context.parentComp !== 'box')
+      ) {
         return updateComponent(node, boxComponents.box, [
           parse({}, [], context).info,
           [{ type: 'value', value: '' }],
@@ -78,31 +83,29 @@ const createUpdater = (components = {}) => {
     };
     if (context.next) {
       if (comp !== boxComponents[context.next]) {
-        return updateComponent(node, boxComponents[context.next], [
+        const result = updateComponent(node, boxComponents[context.next], [
           parse({}, [], context).info,
           [{ type: 'value', value: '' }],
           runUpdate,
         ]);
+        result.__data = data;
+        return result;
       }
     }
-    return runUpdate(node);
+    const result = runUpdate(node);
+    result.__data = data;
+    return result;
   };
 
   return updateNode({});
 };
 
-export default (components, node) => {
+export default (node, components = {}) => {
   let stop;
+  const updater = createUpdater(components);
   return data => {
     if (data) {
-      const child = node.childNodes[0];
-      const scroll = child && child.scrollY;
-      stop = updateChildren(
-        node,
-        !data.value ? [] : [data],
-        createUpdater(components),
-      );
-      if (child) child.scrollTo(0, scroll);
+      stop = updateChildren(node, !data.value ? [] : [data], updater);
     } else if (stop) {
       stop();
     }

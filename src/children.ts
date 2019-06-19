@@ -28,8 +28,7 @@ export default (node, indices, next, depth = 0, group = 0, spacers = false) => {
       )
     : rows;
   indices.forEach((d, index) => {
-    const i = children.findIndex(c => c.__id === (d.id || index + 1));
-    let child = i !== -1 && children.splice(i, 1)[0];
+    let child = children.splice(0, 1)[0];
     const prev = child && findChild(child, dep);
     const result = next(prev, d);
     if (!result) {
@@ -47,19 +46,14 @@ export default (node, indices, next, depth = 0, group = 0, spacers = false) => {
           result,
         )[0];
         appendChild(parent, child, spacers);
-      } else if (result !== prev) {
+      } else {
+        if (result !== prev) prev.parentNode.replaceChild(result, prev);
         if (!dep) child = result;
-        prev.parentNode.replaceChild(result, prev);
         if (child.parentNode !== parent) {
           removeChild(child, spacers);
           appendChild(parent, child, spacers);
         }
       }
-      // const rowIndex = group ? index % group : index;
-      // if (child !== parent.childNodes[rowIndex]) {
-      //   parent.insertBefore(child, parent.childNodes[rowIndex]);
-      // }
-      child.__id = d.id || index + 1;
     }
   });
   children.forEach(child => {
@@ -71,12 +65,19 @@ export default (node, indices, next, depth = 0, group = 0, spacers = false) => {
     });
   }
   return () => {
-    const allChildren = group
-      ? rows.reduce((res, n) => [...res, ...getChildren(n)], [])
+    const rows = getChildren(node).filter((_, i) => !spacers || i % 2 === 0);
+    const children = group
+      ? rows.reduce(
+          (res, n) => [
+            ...res,
+            ...getChildren(n).filter((_, i) => !spacers || i % 2 === 0),
+          ],
+          [],
+        )
       : rows;
-    for (const c of allChildren) {
+    for (const c of children) {
       const inner = findChild(c, dep);
-      inner.__destroy();
+      if (inner.__destroy) inner.__destroy();
     }
   };
 };
