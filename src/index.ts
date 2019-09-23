@@ -52,8 +52,7 @@ const createUpdater = components => {
     const { values, indices } = unpackList(data.value);
     const parsed = parse(values, indices, context);
     const tag = getValues(values, { '': 'string' })[''];
-    if (tag) {
-      if (!components[tag]) return [null, ''];
+    if (tag && components[tag]) {
       return [components[tag], values, indices, parsed, updateNode(context)];
     }
     const boxComp = getBoxComp(parsed.info, context);
@@ -93,7 +92,7 @@ const createUpdater = components => {
       }
     }
     const result = runUpdate(node);
-    result.__data = data;
+    if (result) result.__data = data;
     return result;
   };
 
