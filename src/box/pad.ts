@@ -1,6 +1,6 @@
-import { getChildren } from './utils';
+import { getChildren } from '../utils';
 
-export const padNode = (node, key, pad) => {
+const padNode = (node, key, pad) => {
   const p = (node.__pad = node.__pad || [{}, {}, {}, {}]);
   pad.forEach((v, i) => (p[i][key] = v || 0));
   const totals = p.map(x =>
@@ -14,8 +14,10 @@ export const padNode = (node, key, pad) => {
     .join(' ');
 };
 
-export const padText = (node, pad) => {
-  const children = getChildren(node);
+const padText = (node, pad, allChildren = false) => {
+  const children = allChildren
+    ? ([] as any).slice.call(node.childNodes)
+    : getChildren(node);
   const inline = children.map(
     c =>
       c.nodeType === 3 ||
@@ -39,4 +41,9 @@ export const padText = (node, pad) => {
       ]);
     }
   });
+};
+
+export default {
+  node: padNode,
+  text: padText,
 };

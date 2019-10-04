@@ -1,5 +1,73 @@
 import { createNodes, findChild, getChildren } from './utils';
 
+const batchFunc = func => {
+  let running = false;
+  return () => {
+    if (!running) {
+      running = true;
+      setTimeout(() => {
+        running = false;
+        func();
+      });
+    }
+  };
+};
+
+class ChildNodes {
+  getComponent;
+  onUpdate;
+  updater;
+  data = [] as any[];
+  components = [] as any[];
+  nodes = [] as any[];
+  constructor(getComponent, onUpdate) {
+    this.getComponent = getComponent;
+    this.onUpdate = onUpdate;
+    this.updater = batchFunc(() => onUpdate(true));
+  }
+  update(indices, context) {
+    let hasUpdated = false;
+    for (
+      let i = Math.max(this.components.length, indices.length) - 1;
+      i >= 0;
+      i--
+    ) {
+      const comp = indices[i] && this.getComponent(indices[i], context);
+      if (comp) {
+        if (!(this.components[i] instanceof comp)) {
+          hasUpdated = true;
+          if (this.components[i] && this.components[i].dispose) {
+            this.components[i].dispose();
+          }
+          this.data[i] = null;
+          this.components[i] = comp;
+          this.nodes[i] = null;
+          this.components[i] = new comp(n => {
+            this.nodes[i] = n;
+            this.updater();
+          });
+        }
+        if (indices[i] !== this.data[i]) {
+          this.components[i].update(indices[i], context);
+          this.data[i] = indices[i];
+        }
+      } else {
+        hasUpdated = true;
+        if (this.components[i] && this.components[i].dispose) {
+          this.components[i].dispose();
+        }
+        this.data.splice(i, 1);
+        this.components.splice(i, 1);
+        this.nodes.splice(i, 1);
+      }
+    }
+    this.onUpdate(hasUpdated);
+  }
+  dispose() {
+    this.nodes.forEach(n => n.dispose && n.dispose());
+  }
+}
+
 const appendChild = (parent, child, spacers) => {
   if (spacers && parent.childNodes.length > 0) {
     parent.appendChild(createNodes('div')[0]);
@@ -15,10 +83,10 @@ const removeChild = (child, spacers) => {
   parent.removeChild(child);
 };
 
-export default (node, indices, next, depth = 0, group = 0, spacers = false) => {
+const updateChildren = (node, children, depth, group, spacers) => {
   const dep = depth - (group ? 1 : 0);
   const rows = getChildren(node).filter((_, i) => !spacers || i % 2 === 0);
-  const children = group
+  const childNodes = group
     ? rows.reduce(
         (res, n) => [
           ...res,
@@ -27,11 +95,10 @@ export default (node, indices, next, depth = 0, group = 0, spacers = false) => {
         [],
       )
     : rows;
-  indices.forEach((d, index) => {
-    let child = children.splice(0, 1)[0];
+  children.forEach((next, index) => {
+    let child = childNodes.splice(0, 1)[0];
     const prev = child && findChild(child, dep);
-    const result = next(prev, d);
-    if (!result) {
+    if (!next) {
       if (child) removeChild(child, spacers);
     } else {
       let parent = group ? rows[Math.floor(index / group)] : node;
@@ -43,12 +110,12 @@ export default (node, indices, next, depth = 0, group = 0, spacers = false) => {
       if (!prev) {
         child = createNodes(
           ...Array.from({ length: dep }).map(() => 'div'),
-          result,
+          next,
         )[0];
         appendChild(parent, child, spacers);
       } else {
-        if (result !== prev) prev.parentNode.replaceChild(result, prev);
-        if (!dep) child = result;
+        if (next !== prev) prev.parentNode.replaceChild(next, prev);
+        if (!dep) child = next;
         if (child.parentNode !== parent) {
           removeChild(child, spacers);
           appendChild(parent, child, spacers);
@@ -56,7 +123,7 @@ export default (node, indices, next, depth = 0, group = 0, spacers = false) => {
       }
     }
   });
-  children.forEach(child => {
+  childNodes.forEach(child => {
     removeChild(child, spacers);
   });
   if (group) {
@@ -64,20 +131,53 @@ export default (node, indices, next, depth = 0, group = 0, spacers = false) => {
       if (getChildren(r).length === 0) removeChild(r, spacers);
     });
   }
-  return () => {
-    const rows = getChildren(node).filter((_, i) => !spacers || i % 2 === 0);
-    const children = group
-      ? rows.reduce(
-          (res, n) => [
-            ...res,
-            ...getChildren(n).filter((_, i) => !spacers || i % 2 === 0),
-          ],
-          [],
-        )
-      : rows;
-    for (const c of children) {
-      const inner = findChild(c, dep);
-      if (inner.__destroy) inner.__destroy();
-    }
-  };
 };
+
+export default class Children {
+  node;
+  options: [any, any, any] = [] as any;
+  childNodes;
+  onUpdate;
+  constructor(getComponent, onUpdate?) {
+    this.childNodes = new ChildNodes(getComponent, changed => {
+      if (changed && this.node) {
+        updateChildren(
+          this.node,
+          this.childNodes.nodes.filter(x => x),
+          ...this.options,
+        );
+      }
+      if (onUpdate) onUpdate(getChildren(this.node));
+    });
+    this.onUpdate = onUpdate;
+  }
+  setNode(node) {
+    if (this.node && node) {
+      while (this.node.childNodes.length) {
+        node.appendChild(this.node.firstChild);
+      }
+    }
+    this.node = node;
+  }
+  setOptions(depth = 0, group = 0, spacers = false) {
+    const newOptions = [depth, group, spacers] as any;
+    if (this.node && newOptions.some((x, i) => x !== this.options[i])) {
+      this.options = newOptions;
+      while (this.node.childNodes.length) {
+        this.node.removeChild(this.node.firstChild);
+      }
+      updateChildren(
+        this.node,
+        this.childNodes.nodes.filter(x => x),
+        ...this.options,
+      );
+      if (this.onUpdate) this.onUpdate(getChildren(this.node));
+    }
+  }
+  update(indices, context) {
+    this.childNodes.update(indices, context);
+  }
+  dispose() {
+    this.childNodes.dispose();
+  }
+}
