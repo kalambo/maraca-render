@@ -1,5 +1,6 @@
 import Children from '../../children';
-import { createNodes, findChild, parseValue, unpackList } from '../../utils';
+import updateChildNodes from '../../childNodes';
+import { createNodes, getChildren } from '../../utils';
 
 import getComponent from '../index';
 import pad from '../pad';
@@ -7,53 +8,44 @@ import parse from '../parse';
 import resize from '../resize';
 import { updateNode } from '../utils';
 
-const getValue = (data, context) => {
-  if (
-    data.type === 'value' ||
-    context.flow ||
-    /\bflow\b/.test(parseValue(unpackList(data.value).values.style, 'string'))
-  ) {
-    return [{ key: { type: 'value', value: '1' }, value: data }];
+export default class Box extends Children {
+  constructor(node) {
+    super();
+    createNodes(node, 'div');
   }
-  return data.value;
-};
-
-export default class {
-  nodes = createNodes('div', 'div');
-  pad;
-  children = new Children(getComponent(false), childNodes => {
-    childNodes.forEach(n => {
-      const c = findChild(n, 2);
-      c.parentNode.style.display =
-        c.nodeType === 3 || c.tagName === 'SPAN' ? 'inline' : 'block';
-      c.parentNode.parentNode.style.display =
-        c.nodeType === 3 || c.tagName === 'SPAN' ? 'inline' : 'block';
-    });
-    pad.text(this.nodes[1], this.pad);
-  });
-  constructor(setNode) {
-    this.children.setNode(this.nodes[1]);
-    this.children.setOptions(2);
-    setNode(this.nodes[0]);
-  }
-  update(data, { noWidth, ...context }) {
-    const [node, inner] = this.nodes;
-    const { values, indices } = unpackList(getValue(data, context));
-
-    const style = parse.style(values, context);
-    this.pad = style.pad;
+  static getComponent = getComponent;
+  static getInfo(values, { display = 'block', width, ...context }) {
+    const { context: nextContext, ...style } = parse.style(values, context);
     const box = parse.box(values);
-    const size = parse.size(values, noWidth && 'auto');
+    const size = parse.size(values, width);
+    return {
+      props: { values, style, box, size, display },
+      context: nextContext,
+    };
+  }
+  render(node, { values, style, box, size, display }, childNodes) {
+    const inner = getChildren(node)[0];
 
-    this.children.update(indices, style.context);
+    updateChildNodes(inner, childNodes, 2);
+    childNodes.forEach(n => {
+      n.parentNode.style.display =
+        n.nodeType === 3 || n.tagName === 'SPAN' ? 'inline' : 'block';
+      n.parentNode.parentNode.style.display =
+        n.nodeType === 3 || n.tagName === 'SPAN' ? 'inline' : 'block';
+    });
 
     updateNode(inner, style.props);
     pad.node(inner, 'pad', box.pad);
+    pad.text(inner, style.pad);
 
     resize(node, values);
-    updateNode(node, box.props, size.props);
-  }
-  dispose() {
-    this.children.dispose();
+    updateNode(node, box.props, size.props, {
+      style: {
+        display,
+        ...(display !== 'block'
+          ? { width: size.width, verticalAlign: size.yAlign }
+          : {}),
+      },
+    });
   }
 }

@@ -95,3 +95,17 @@ export const updateNode = (node, ...props) => {
   applyObj(node, diffObjs(cleaned, node.__props));
   node.__props = cleaned;
 };
+
+export const wrapInList = (data, ...hoistKeys) => {
+  return {
+    type: 'list',
+    value: [
+      { key: { type: 'value', value: '1' }, value: data },
+      ...(data.type === 'list'
+        ? hoistKeys
+            .map(k => data.value.find(v => v.key.value === k))
+            .filter(x => x)
+        : []),
+    ],
+  };
+};

@@ -1,26 +1,24 @@
-import { createNodes, parseValue, unpackList } from '../../utils';
+import { createNodes, getChildren, parseValue } from '../../utils';
 
-import resize from '../resize';
 import parse from '../parse';
+import resize from '../resize';
 import { updateNode } from '../utils';
 
-export default class {
-  node = createNodes('img')[0];
-  constructor(setNode) {
-    setNode(this.node);
+export default class Image {
+  constructor(node) {
+    createNodes(node, 'img');
   }
-  update(data) {
-    const { values } = unpackList(data.value);
-
+  static getInfo(values, context) {
     const box = parse.box(values);
     const size = parse.size(values);
-
-    resize(this.node, values);
-    updateNode(this.node, box.props, size.props, {
+    return { props: { values, box, size }, context };
+  }
+  render(node, { values, box, size }) {
+    updateNode(getChildren(node)[0], {
       src: parseValue(values.image, 'string'),
-      style: {
-        width: '100%',
-      },
+      style: { width: '100%' },
     });
+    resize(node, values);
+    updateNode(node, box.props, size.props);
   }
 }

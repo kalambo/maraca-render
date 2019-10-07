@@ -31,15 +31,20 @@ const toIndex = (v: string) => {
   const n = parseFloat(v);
   return !isNaN(v as any) && !isNaN(n) && n === Math.floor(n) && n > 0 && n;
 };
-export const unpackList = items => {
-  const result = { values: {} as any, indices: [] as any[] };
-  items.forEach(({ key, value }) => {
-    if (key.type !== 'list') {
-      const i = toIndex(key.value || '');
-      if (i) result.indices[i - 1] = value;
-      else result.values[key.value || ''] = value;
-    }
-  });
+export const unpackData = (data, withIndices = true) => {
+  const result = {
+    values: data.type === 'value' ? data.value : {},
+    indices: [] as any[],
+  };
+  if (data.type === 'list') {
+    data.value.forEach(({ key, value }) => {
+      if (key.type !== 'list') {
+        const i = withIndices && toIndex(key.value || '');
+        if (i) result.indices[i - 1] = value;
+        else result.values[key.value || ''] = value;
+      }
+    });
+  }
   return result;
 };
 
@@ -93,3 +98,16 @@ export const getSetters = (values, setters) =>
     }
     return res;
   }, {});
+
+export const shallowEqual = (objA, objB) => {
+  if (objA === objB) return true;
+  if (!objA || !objB) return false;
+  if (typeof objA !== 'object' || typeof objB !== 'object') return false;
+  const aKeys = Object.keys(objA);
+  if (Object.keys(objB).length !== aKeys.length) return false;
+  for (let i = 0; i < aKeys.length; i++) {
+    const key = aKeys[i];
+    if (objA[key] !== objB[key]) return false;
+  }
+  return true;
+};
