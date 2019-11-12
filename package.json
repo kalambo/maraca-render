@@ -11,7 +11,8 @@
   },
   "prettier": {
     "singleQuote": true,
-    "trailingComma": "all"
+    "trailingComma": "all",
+    "proseWrap": "always"
   },
   "dependencies": {
     "element-resize-detector": "^1.2.0",
