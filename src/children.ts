@@ -53,7 +53,7 @@ export default class Children {
               comp.nodeType === 'text'
                 ? createTextNode('')
                 : createNodes(comp.nodeType || 'div')[0];
-            newNode.id = comp.name;
+            if (newNode.dataset) newNode.dataset.component = comp.name;
             this.children[i] = {
               component: comp,
               node: newNode,

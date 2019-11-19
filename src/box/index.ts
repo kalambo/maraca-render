@@ -10,13 +10,13 @@ export default (data, context) => {
   }
   if (parseValue(values.image, 'string')) return components.Image;
   if (values.input) return components.Input;
-  if (parseValue(values.gap, 'string') || parseValue(values.cols, 'string')) {
+  const cols = parseValue(values.cols, 'string');
+  if (parseValue(values.gap, 'string') || cols) {
+    if (/\brows\b/.test(cols)) return components.Table;
+    if (cols === 'table-row') return components.Row;
     return components.Grid;
   }
   return components.Box;
 };
 
 import * as components from './components';
-
-//   if (cols.rows) return 'table';
-//   if (next === 'row') return 'row';

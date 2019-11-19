@@ -10,6 +10,7 @@ import parseDirs from './dirs';
 export default values => {
   const setters = getSetters(values, ['hover', 'click', 'enter']);
   return {
+    round: parseDirs(parseValue(values.round, 'string')),
     pad: parseDirs(parseValue(values.pad, 'string')) || [0, 0, 0, 0],
     props: {
       onmouseenter: setters.hover && (() => setters.hover(fromJs(true))),

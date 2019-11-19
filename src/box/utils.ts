@@ -96,16 +96,19 @@ export const updateNode = (node, ...props) => {
   node.__props = cleaned;
 };
 
-export const wrapInList = (data, ...hoistKeys) => {
-  return {
-    type: 'list',
-    value: [
-      { key: { type: 'value', value: '1' }, value: data },
-      ...(data.type === 'list'
-        ? hoistKeys
-            .map(k => data.value.find(v => v.key.value === k))
-            .filter(x => x)
-        : []),
-    ],
-  };
+export const wrapInList = (data, ...hoistKeys) => ({
+  type: 'list',
+  value: [
+    { key: { type: 'value', value: '1' }, value: data },
+    ...(data.type === 'list'
+      ? hoistKeys
+          .map(k => data.value.find(v => v.key.value === k))
+          .filter(x => x)
+      : []),
+  ],
+});
+
+export const extendList = (data, values) => {
+  const base = data.type === 'list' ? data : wrapInList(data);
+  return { type: 'list', value: [...base.value, ...values] };
 };
