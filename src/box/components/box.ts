@@ -1,33 +1,31 @@
-import Children from '../../children';
-import updateChildNodes from '../../childNodes';
-import { createNodes, getChildren } from '../../utils';
+import { Node } from 'maraca';
 
-import getComponent from '../index';
+import updateChildren from '../../children';
+import { createNodes } from '../../utils';
+
+import getChild from '../index';
 import pad from '../pad';
 import parse from '../parse';
 import resize from '../resize';
 import { updateNode } from '../utils';
 
-export default class Box extends Children {
-  constructor(node) {
-    super();
-    createNodes(node, 'div');
-  }
-  static getComponent = getComponent;
+export default class Box extends Node {
+  nodes = createNodes('div', 'div');
+  static getChild = getChild;
   static getInfo(values, { display = 'block', width, ...context }) {
     const { context: nextContext, ...style } = parse.style(values, context);
     const box = parse.box(values);
     const size = parse.size(values, width);
     return {
       props: { values, style, box, size, display },
-      context: nextContext,
+      context: { ...nextContext, inlineWrapped: true },
     };
   }
-  render(node, { values, style, box, size, display }, childNodes) {
-    const inner = getChildren(node)[0];
+  update({ values, style, box, size, display }, children) {
+    const [node, inner] = this.nodes;
 
-    updateChildNodes(inner, childNodes, 2);
-    childNodes.forEach(n => {
+    updateChildren(inner, children, 2);
+    children.forEach(n => {
       n.parentNode.style.display =
         n.nodeType === 3 || n.tagName === 'SPAN' ? 'inline' : 'block';
       n.parentNode.parentNode.style.display =
@@ -47,5 +45,7 @@ export default class Box extends Children {
           : {}),
       },
     });
+
+    return node;
   }
 }

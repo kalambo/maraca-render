@@ -1,117 +1,66 @@
-import { createNodes, createTextNode, shallowEqual, unpackData } from './utils';
+import { createNodes, findChild, getChildren } from './utils';
 
-const dispose = c => {
-  if (c && c.disposeChildren) c.disposeChildren();
-  if (c && c.dispose) c.dispose();
-};
-
-const getComponentBase = (parent, data, context) => {
-  if (!data) return {};
-  const result = parent.getComponent(data, context);
-  if (typeof result === 'function') return { component: result, data };
-  return getComponentBase(parent, result, context);
-};
-const getComponent = (parent, data, context) => {
-  const result = getComponentBase(parent, data, context);
-  if (result.component && result.component.wrapComponent) {
-    const wrapped = result.component.wrapComponent(
-      parent,
-      result.data,
-      context,
-    );
-    if (wrapped) return getComponent(parent, wrapped, context);
+const appendChild = (parent, child, spacers) => {
+  if (spacers && parent.childNodes.length > 0) {
+    parent.appendChild(createNodes('div')[0]);
   }
-  return result;
+  parent.appendChild(child);
+};
+const removeChild = (child, spacers) => {
+  const parent = child.parentNode;
+  if (spacers) {
+    const j = [...parent.childNodes].indexOf(child);
+    if (j > 0) parent.removeChild(parent.childNodes[j - 1]);
+  }
+  parent.removeChild(child);
 };
 
-export default class Children {
-  children = [] as any[];
-  indices = [];
-  info;
-  constructor() {}
-  getComponent(..._): any {}
-  render(..._) {}
-  updateChildren({ component, node, info }, indices) {
-    let hasUpdated = false;
-    for (
-      let i = Math.max(this.children.length, indices.length) - 1;
-      i >= 0;
-      i--
-    ) {
-      if (indices[i] !== this.indices[i] || info !== this.info) {
-        hasUpdated = true;
-        if (i < indices.length) this.children[i] = this.children[i] || {};
-        const { component: comp, data } = getComponent(
-          component,
-          indices[i],
-          info.context,
-        );
-        if (comp) {
-          if (!(this.children[i].component === comp)) {
-            dispose(this.children[i].instance);
-            const newNode =
-              comp.nodeType === 'text'
-                ? createTextNode('')
-                : createNodes(comp.nodeType || 'div')[0];
-            if (newNode.dataset) newNode.dataset.component = comp.name;
-            this.children[i] = {
-              component: comp,
-              node: newNode,
-              instance: new comp(newNode),
-            };
-          }
-          const unpacked = unpackData(
-            data,
-            !!this.children[i].instance.updateChildren,
-          );
-          if (
-            !(
-              shallowEqual(this.children[i].values, unpacked.values) &&
-              this.children[i].childCount === unpacked.indices.length
-            )
-          ) {
-            this.children[i].info = comp.getInfo
-              ? comp.getInfo(
-                  unpacked.values,
-                  info.context,
-                  unpacked.indices.length,
-                )
-              : { props: unpacked.values, context: info.context };
-            this.children[i].values = unpacked.values;
-            this.children[i].childCount = unpacked.indices.length;
-          }
-          if (this.children[i].instance.updateChildren) {
-            this.children[i].instance.updateChildren(
-              this.children[i],
-              unpacked.indices,
-            );
-          } else {
-            this.children[i].instance.render(
-              this.children[i].node,
-              this.children[i].info.props,
-              this.children[i].info.context,
-            );
-          }
-        } else {
-          dispose(this.children[i] && this.children[i].instance);
-          if (i < indices.length) this.children[i] = {};
-          else this.children.splice(i, 1);
+export default (node, children, depth = 0, group = 0, spacers = false) => {
+  const dep = depth - (group ? 1 : 0);
+  const rows = getChildren(node).filter((_, i) => !spacers || i % 2 === 0);
+  const childNodes = group
+    ? rows.reduce(
+        (res, n) => [
+          ...res,
+          ...getChildren(n).filter((_, i) => !spacers || i % 2 === 0),
+        ],
+        [],
+      )
+    : rows;
+  children.forEach((next, index) => {
+    let child = childNodes.splice(0, 1)[0];
+    const prev = child && findChild(child, dep);
+    if (!next) {
+      if (child) removeChild(child, spacers);
+    } else {
+      let parent = group ? rows[Math.floor(index / group)] : node;
+      if (!parent) {
+        parent = createNodes('div')[0];
+        appendChild(node, parent, spacers);
+        rows.push(parent);
+      }
+      if (!prev) {
+        child = createNodes(
+          ...Array.from({ length: dep }).map(() => 'div'),
+          next,
+        )[0];
+        appendChild(parent, child, spacers);
+      } else {
+        if (next !== prev) prev.parentNode.replaceChild(next, prev);
+        if (!dep) child = next;
+        if (child.parentNode !== parent) {
+          removeChild(child, spacers);
+          appendChild(parent, child, spacers);
         }
       }
     }
-    if (hasUpdated) {
-      this.render(
-        node,
-        info.props,
-        this.children.filter(c => c.node).map(c => c.node),
-        this.children.filter(c => c.node).map(c => c.info.props),
-        info.context,
-      );
-    }
-    this.indices = indices;
-    this.info = info;
+  });
+  childNodes.forEach(child => {
+    removeChild(child, spacers);
+  });
+  if (group) {
+    rows.forEach(r => {
+      if (getChildren(r).length === 0) removeChild(r, spacers);
+    });
   }
-  disposeChildren() {
-    this.children.forEach(c => dispose(c.instance));
-  }
-}
+};

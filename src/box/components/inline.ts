@@ -1,36 +1,63 @@
-import Children from '../../children';
-import updateChildNodes from '../../childNodes';
+import { Node } from 'maraca';
+
+import updateChildren from '../../children';
+import { createNodes, createTextNode } from '../../utils';
 
 import parse from '../parse';
-import { updateNode, wrapInList } from '../utils';
+import { updateNode } from '../utils';
 
-import Box from './box';
+// const [node, inner] = this.nodes;
 
-const wrapComponent = (parent, data) =>
-  ![Box, Flow, Text].includes(parent) && wrapInList(data);
+// updateChildren(inner, children, 2);
+// children.forEach(n => {
+//   n.parentNode.style.display =
+//     n.nodeType === 3 || n.tagName === 'SPAN' ? 'inline' : 'block';
+//   n.parentNode.parentNode.style.display =
+//     n.nodeType === 3 || n.tagName === 'SPAN' ? 'inline' : 'block';
+// });
 
-export class Text {
-  static nodeType = 'text';
-  static wrapComponent = wrapComponent;
-  render(node, value) {
-    node.nodeValue = value;
+// updateNode(inner, style.props);
+// pad.node(inner, 'pad', box.pad);
+// pad.text(inner, style.pad);
+
+// resize(node, values);
+// updateNode(node, box.props, size.props, {
+//   style: {
+//     display,
+//     ...(display !== 'block'
+//       ? { width: size.width, verticalAlign: size.yAlign }
+//       : {}),
+//   },
+// });
+
+export class Value {
+  node = createTextNode('');
+  static getInfo(value, { inlineWrapped, ...context }) {
+    return { props: { value, wrap: !inlineWrapped }, context: context };
+  }
+  update({ value, wrap }) {
+    this.node.nodeValue = value;
+    return this.node;
   }
 }
 
-export class Flow extends Children {
-  static nodeType = 'span';
-  static wrapComponent = wrapComponent;
-  static getComponent(data) {
+export class Flow extends Node {
+  node = createNodes('span')[0];
+  static getChild(data) {
     if (data.type === 'value') return data.value ? Text : null;
     return Flow;
   }
-  static getInfo(values, context) {
+  static getInfo(values, { inlineWrapped, ...context }) {
     const { context: nextContext, ...style } = parse.style(values, context);
     const box = parse.box(values);
-    return { props: { style, box }, context: nextContext };
+    return {
+      props: { style, box, wrap: !inlineWrapped },
+      context: { ...nextContext, inlineWrapped: true },
+    };
   }
-  render(node, { style, box }, childNodes) {
-    updateChildNodes(node, childNodes);
-    updateNode(node, style.props, box.props);
+  update({ style, box, wrap }, children) {
+    updateChildren(this.node, children);
+    updateNode(this.node, style.props, box.props);
+    return this.node;
   }
 }

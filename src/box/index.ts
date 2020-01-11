@@ -1,8 +1,10 @@
-import { parseValue, unpackData } from '../utils';
+import { unpack } from 'maraca';
+
+import { parseValue } from '../utils';
 
 export default (data, context) => {
-  if (data.type === 'value') return data.value ? components.Text : null;
-  const { values } = unpackData(data);
+  if (data.type === 'value') return data.value ? components.Value : null;
+  const { values } = unpack(data);
   const tag = parseValue(values[''], 'string', '');
   if (context.components[tag]) return context.components[tag];
   if (context.flow || /\bflow\b/.test(parseValue(values.style, 'string'))) {

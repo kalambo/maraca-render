@@ -27,27 +27,6 @@ export const getChildren = node =>
 export const findChild = (node, depth): any =>
   Array.from({ length: depth }).reduce(res => res && getChildren(res)[0], node);
 
-const toIndex = (v: string) => {
-  const n = parseFloat(v);
-  return !isNaN(v as any) && !isNaN(n) && n === Math.floor(n) && n > 0 && n;
-};
-export const unpackData = (data, withIndices = true) => {
-  const result = {
-    values: data.type === 'value' ? data.value : {},
-    indices: [] as any[],
-  };
-  if (data.type === 'list') {
-    data.value.forEach(({ key, value }) => {
-      if (key.type !== 'list') {
-        const i = withIndices && toIndex(key.value || '');
-        if (i) result.indices[i - 1] = value;
-        else result.values[key.value || ''] = value;
-      }
-    });
-  }
-  return result;
-};
-
 const getValues = (values, config, map?) => {
   const result = Object.keys(config).reduce((res, k) => {
     if (values[k]) {

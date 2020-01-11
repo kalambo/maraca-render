@@ -1,6 +1,7 @@
-import getComponent from './box';
-import updateChildNodes from './childNodes';
-import Children from './children';
+import getChild from './box';
+import updateChildren from './children';
+
+import { Node } from 'maraca';
 
 export { default as pad } from './box/pad';
 export { default as parse } from './box/parse';
@@ -9,16 +10,13 @@ export { updateNode } from './box/utils';
 export { createNodes, getChildren, parseValue } from './utils';
 
 export default (node, components = {}) => {
-  class Base extends Children {
-    static getComponent = getComponent;
-    render(node, _, children) {
-      updateChildNodes(node, children);
+  return class Base extends Node {
+    static getChild = getChild;
+    static getInfo() {
+      return { props: {}, context: { components } };
     }
-  }
-  const base = new Base();
-  const arg = { component: Base, node, info: { context: { components } } };
-  return data => {
-    if (data) base.updateChildren(arg, !data.value ? [] : [data]);
-    else base.disposeChildren();
+    update(_, children) {
+      updateChildren(node, children);
+    }
   };
 };

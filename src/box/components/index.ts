@@ -1,5 +1,5 @@
 export { default as Box } from './box';
-export { Flow, Text } from './inline';
+export { Flow, Value } from './inline';
 export { default as Grid } from './grid';
 export { default as Image } from './image';
 export { default as Input } from './input';
