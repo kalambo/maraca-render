@@ -1,4 +1,4 @@
-import { isNumber } from '../utils';
+import { isNumber } from './utils';
 
 // var chroma = require("chroma-js")
 // const [h, c, l] = chroma.hex('e84118').hcl();

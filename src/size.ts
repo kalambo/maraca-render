@@ -1,8 +1,6 @@
-import { parseValue } from '../../utils';
+import { isNumber, parseValue, split } from './utils';
 
-import { isNumber, split } from '../utils';
-
-export default (values, forceWidth?) => {
+export default values => {
   const result = {} as any;
 
   split(parseValue(values.x, 'string')).forEach(p => {
@@ -14,9 +12,7 @@ export default (values, forceWidth?) => {
       else result.width = `${n}px`;
     }
   });
-  if (forceWidth) result.width = forceWidth;
-  if (result.width) result.xAlign = result.xAlign || 'center';
-  if (!result.width) result.width = 'auto';
+  result.xAlign = result.xAlign || 'center';
 
   split(parseValue(values.y, 'string')).forEach(p => {
     if (['top', 'middle', 'bottom'].includes(p)) {
@@ -30,18 +26,11 @@ export default (values, forceWidth?) => {
   result.yAlign = result.yAlign || (result.height ? 'middle' : 'top');
 
   return {
-    ...result,
-    props: {
-      style: {
-        width: ['left', 'right'].includes(result.xAlign) ? 'auto' : '100%',
-        maxWidth: result.width,
-        height: result.height,
-        float: ['left', 'right'].includes(result.xAlign)
-          ? result.xAlign
-          : 'none',
-        marginLeft: result.xAlign !== 'left' ? 'auto' : '',
-        marginRight: result.xAlign !== 'right' ? 'auto' : '',
-      },
-    },
+    width: ['left', 'right'].includes(result.xAlign) ? 'auto' : '100%',
+    maxWidth: result.width || 'auto',
+    height: result.height,
+    float: ['left', 'right'].includes(result.xAlign) ? result.xAlign : 'none',
+    marginLeft: result.xAlign !== 'left' ? 'auto' : '',
+    marginRight: result.xAlign !== 'right' ? 'auto' : '',
   };
 };
