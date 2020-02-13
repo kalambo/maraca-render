@@ -106,15 +106,10 @@ lit-html@^1.1.2:
   resolved "https://registry.yarnpkg.com/lit-html/-/lit-html-1.1.2.tgz#2e3560a7075210243649c888ad738eaf0daa8374"
   integrity sha512-FFlUMKHKi+qG1x1iHNZ1hrtc/zHmfYTyrSvs3/wBTvaNtpZjOZGWzU7efGYVpgp6KvWeKF6ql9/KsCq6Z/mEDA==
 
-lodash.throttle@^4.1.1:
-  version "4.1.1"
-  resolved "https://registry.yarnpkg.com/lodash.throttle/-/lodash.throttle-4.1.1.tgz#c23e91b710242ac70c37f1e1cda9274cc39bf2f4"
-  integrity sha1-wj6RtxAkKscMN/HhzaknTMOb8vQ=
-
-maraca@^0.5.5:
-  version "0.5.5"
-  resolved "https://registry.yarnpkg.com/maraca/-/maraca-0.5.5.tgz#234226bca08007f0ccb3475309279d61e9f82c24"
-  integrity sha512-yQxMADy2EVgp33vo1/wApB5AiamSA6fqsW11Ee/w8cTbD0Ngy/Eyf20nNvLa16sZDIQVKEsmvaOqepqbX9Ke/g==
+maraca@^0.6.0:
+  version "0.6.0"
+  resolved "https://registry.yarnpkg.com/maraca/-/maraca-0.6.0.tgz#dbaab45536775b513c1d09c0b22bd092805da42b"
+  integrity sha512-JvSBXpijktwTmLWnD2nZPQ7e19ZplICJ3yar4Eu3mBNCYjhwduUxgM8cUSRq6VqRnqq7b/q9UGZ3jTZJJv/Cog==
   dependencies:
     ohm-js "^0.14.0"
 
@@ -157,7 +152,7 @@ prettier@^1.19.1:
   resolved "https://registry.yarnpkg.com/prettier/-/prettier-1.19.1.tgz#f7d7f5ff8a9cd872a7be4ca142095956a60797cb"
   integrity sha512-s7PoyDv/II1ObgQunCbB9PdLmUcBZcnWOcxDh7O0N/UwDEsHyqkW+Qh28jW+mVuCdx7gLB0BotYI1Y6uI9iyew==
 
-rimraf@^3.0.1:
+rimraf@^3.0.2:
   version "3.0.2"
   resolved "https://registry.yarnpkg.com/rimraf/-/rimraf-3.0.2.tgz#f1a5402ba6220ad52cc1282bac1ae3aa49fd061a"
   integrity sha512-JZkJMZkAGFFPP2YqXZXPbMlMBgsxzE8ILs4lMIX/2o0L9UBw9O/Y3o6wFw/i9YLapcUJWwqbi3kdxIPdC62TIA==

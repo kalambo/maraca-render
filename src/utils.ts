@@ -125,7 +125,7 @@ export const unpack = data => {
     indices: [] as any[],
   };
   if (data.type === 'box') {
-    data.value.forEach(({ key, value }) => {
+    data.value.toPairs().forEach(({ key, value }) => {
       if (key.type !== 'box') {
         const i = toIndex(key.value || '');
         if (i) result.indices[i - 1] = value;
