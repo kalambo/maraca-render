@@ -64,7 +64,7 @@ element to create as the root node for this component.
 #### `static getInfo(values, context) => { props; context }`
 
 The `getInfo` static method takes the values provided to the component
-(non-indexed items from the relevant Maraca list), along with the current
+(non-indexed items from the relevant Maraca box), along with the current
 context, and returns the props for this component (passed to `render`), and the
 new context (passed to any child components).
 

@@ -32,7 +32,14 @@ export const parseDirs = s => {
   ].map(toNumber);
 };
 
-const getValues = (values, config, map?) => {
+const getValues = (pairs, config, map?) => {
+  const values = pairs.reduce(
+    (res, { key, value }) => ({
+      ...res,
+      [key.type === 'value' ? key.value : JSON.stringify(key.value)]: value,
+    }),
+    {},
+  );
   const result = Object.keys(config).reduce((res, k) => {
     if (values[k]) {
       const result = parseValue(values[k], config[k]);
@@ -48,14 +55,14 @@ export const parseValue = (
 ) => {
   if (!config) return null;
   if (typeof config === 'object') {
-    if (data.type !== 'list') return {};
-    return getValues(data.value.toObject(), config);
+    if (data.type !== 'box') return {};
+    return getValues(data.value.toPairs(), config);
   }
   if (config === true) return data;
   const { type, value } = data;
   if (config === 'boolean') return !!value;
   if (config === 'string') return type === 'value' ? value : null;
-  const v = type !== 'list' ? toJs(data) : null;
+  const v = type !== 'box' ? toJs(data) : null;
   if (['integer', 'number'].includes(config)) {
     if (typeof v !== 'number') return null;
     return config === 'number' ? v : Math.floor(v) === v ? v : null;
@@ -117,9 +124,9 @@ export const unpack = data => {
     values: data.type === 'value' ? data.value : {},
     indices: [] as any[],
   };
-  if (data.type === 'list') {
+  if (data.type === 'box') {
     data.value.forEach(({ key, value }) => {
-      if (key.type !== 'list') {
+      if (key.type !== 'box') {
         const i = toIndex(key.value || '');
         if (i) result.indices[i - 1] = value;
         else result.values[key.value || ''] = value;
