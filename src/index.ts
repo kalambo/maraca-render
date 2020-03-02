@@ -1,342 +1,170 @@
-import { html, render } from 'lit-html';
-import { repeat } from 'lit-html/directives/repeat';
-import { styleMap } from 'lit-html/directives/style-map';
 import { fromJs } from 'maraca';
-import { ResizeObserver } from '@juggle/resize-observer';
-import * as uuid from 'uuid/v1';
 
-import parseBox from './box';
-import parseCols from './cols';
-import parseSize from './size';
-import parseStyle from './style';
-import { memo, parseValue, toPx, unpack } from './utils';
+// import { ResizeObserver } from '@juggle/resize-observer';
+// setResize = memo(false, false, node => {
+//   if (this.observer !== false) {
+//     if (this.observer) {
+//       this.observer.disconnect();
+//       this.observer = null;
+//     }
+//     if (node) {
+//       this.observer = new ResizeObserver(entries => {
+//         const { inlineSize, blockSize } = entries[0].borderBoxSize[0];
+//         this.onResize(inlineSize, blockSize);
+//       });
+//       this.observer.observe(node);
+//     }
+//   }
+// });
+// this.onResize = (width, height) => {
+//   if (values.width?.push) values.width?.push(fromJs(width));
+//   if (values.height?.push) values.height?.push(fromJs(height));
+// };
+// setTimeout(() =>
+//   this.setResize(
+//     values.width?.push || values.height?.push
+//       ? document.getElementById(this.id)
+//       : null,
+//   ),
+// );
 
-const getDirs = (top = 0, bottom = 0, left = 0, right = 0) =>
-  [top, right, bottom, left].map(s => `${s}px`).join(' ');
-
-class Node {
-  indexNodes = [] as Node[];
-  id = uuid();
-  update = memo(false, false, (data, context) => {
-    if (data.type === 'value') return this.render(data.value, [], context);
-
-    const {
-      values: { style, color, ...values },
-      indices,
-    } = unpack(data);
-    const ctx = this.getContext({ style, color, input: values.input }, context);
-
-    if (values.image || values.input) {
-      indices.forEach((d, i) => (values[i + 1] = d));
-      indices.splice(0);
-    }
-    for (let i = indices.length; i < this.indexNodes.length; i++) {
-      this.indexNodes[i].dispose();
-      delete this.indexNodes[i];
-    }
-    const children = indices.map((d, i) => {
-      this.indexNodes[i] = this.indexNodes[i] || new Node();
-      return this.indexNodes[i].update(d, ctx);
-    });
-
-    return this.render(values, children, ctx);
-  });
-
-  getContext = memo(true, false, (values, { noWrap, ...context }) =>
-    parseStyle(values, context),
-  );
-  observer;
-  onResize;
-  setResize = memo(false, false, node => {
-    if (this.observer !== false) {
-      if (this.observer) {
-        this.observer.disconnect();
-        this.observer = null;
-      }
-      if (node) {
-        this.observer = new ResizeObserver(entries => {
-          const { inlineSize, blockSize } = entries[0].borderBoxSize[0];
-          this.onResize(inlineSize, blockSize);
-        });
-        this.observer.observe(node);
-      }
-    }
-  });
-  render = memo(false, true, false, (values, children, context) => {
-    if (typeof values === 'string') return { type: 'inline', node: values };
-
-    const box = parseBox(values);
-    const size = parseSize(values);
-    // prettier-ignore
-    const renderBox = (styles, content, type) =>
-      html`<div
-        id=${this.id}
-        @mouseenter=${box.onmouseenter}
-        @mouseleave=${box.onmouseleave}
-        @mousedown=${box.onmousedown}
-        @keypress=${box.onkeypress}
-        style=${styleMap({ ...box.style, ...styles, ...size })}
-        data-type=${type}
-        ><div>${content}</div></div
-      >`;
-
-    this.onResize = (width, height) => {
-      if (values.width?.push) values.width?.push(fromJs(width));
-      if (values.height?.push) values.height?.push(fromJs(height));
-    };
-    setTimeout(() =>
-      this.setResize(
-        values.width?.push || values.height?.push
-          ? document.getElementById(this.id)
-          : null,
-      ),
+const toJs = data => {
+  if (data.type === 'value') return data.value;
+  return data.value
+    .toPairs()
+    .reduce(
+      (res, { key, value }) => ({ ...res, [toJs(key)]: toJs(value) }),
+      {},
     );
+};
 
-    if (values.image) {
-      return {
-        type: 'basic',
-        node: renderBox(
-          {},
-          html`
-            <img
-              src=${parseValue(values.image, 'string')}
-              style="width: 100%"
-            />
-          `,
-          'image',
-        ),
-      };
+const toIndex = (v: string) => {
+  const n = parseFloat(v);
+  return !isNaN(v as any) && !isNaN(n) && n === Math.floor(n) && n > 0 && n;
+};
+const unpack = value => {
+  const result = { values: {} as any, indices: [] as any[] };
+  value.toPairs().forEach(({ key, value }) => {
+    if (key.type !== 'box') {
+      const i = toIndex(key.value || '');
+      if (i) result.indices[i - 1] = value;
+      else result.values[key.value || ''] = value;
     }
-
-    const textStyle = {
-      fontSize: `${context.size}px`,
-      minHeight: `${context.size}px`,
-      lineHeight: `${Math.floor(context.height * context.size)}px`,
-      fontWeight: context.weight,
-      fontStyle: context.style,
-      fontFamily: context.font,
-      textAlign: context.align,
-      textDecoration: context.strike && 'line-through',
-      whiteSpace: context.exact && 'pre',
-      color: context.color,
-    };
-
-    if (context.flow) {
-      return {
-        type: 'inline',
-        node: renderBox(
-          { display: 'inline', ...textStyle },
-          repeat<any>(
-            children,
-            (_, i) => i,
-            c => c.node,
-          ),
-          'flow',
-        ),
-      };
-    }
-
-    if (values.input) {
-      // if (parseValue(values.focus, 'boolean')) setTimeout(() => inner.focus());
-      return {
-        type: 'basic',
-        node: renderBox(
-          {
-            padding: getDirs(
-              box.pad[0] + 1,
-              box.pad[2] + 1,
-              box.pad[3],
-              box.pad[1],
-            ),
-          },
-          html`
-            <div
-              style=${styleMap({
-                margin: getDirs(
-                  Math.floor(context.pad) - 1,
-                  Math.ceil(context.pad) - 1,
-                ),
-              })}
-            >
-              <input
-                type=${context.hidden ? 'password' : 'text'}
-                value=${parseValue(values.input, 'string') || ''}
-                @input=${values.input.push &&
-                  (e => values.input.push(fromJs(e.target.value)))}
-                @focus=${values.focus?.push &&
-                  (() => values.focus.push(fromJs(true)))}
-                @blur=${values.focus?.push &&
-                  (() => values.focus.push(fromJs(false)))}
-                style=${styleMap(textStyle)}
-              />
-            </div>
-          `,
-          'input',
-        ),
-      };
-    }
-
-    // bullet
-    // result.display = 'list-item';
-    // result.listStylePosition = 'inside';
-
-    //         tableLayout:
-    //           childProps.some(p => p.size && p.size.width !== 'auto') ||
-    //           cols.equal ||
-    //           gap
-    //             ? 'fixed'
-    //             : 'auto',
-
-    //         display: 'table-cell',
-    //         width: cols.equal && `${100 / cols.cols}%`,
-
-    const cols = parseCols(values, children.length);
-    if (cols) {
-      return {
-        type: 'basic',
-        node: renderBox(
-          {
-            ...textStyle,
-            display: 'table',
-            tableLayout: 'fixed',
-            width: '100%',
-            padding: toPx(box.pad),
-          },
-          repeat(
-            Array.from({ length: Math.ceil(children.length / cols.cols) }),
-            (_, i) => i,
-            (_, i) =>
-              html`
-                ${i
-                  ? html`
-                      <div
-                        style=${styleMap({
-                          display: 'table-row',
-                          height: toPx(cols.gap[0]),
-                        })}
-                      />
-                    `
-                  : null}
-                <div style="display: table-row">
-                  ${repeat(
-                    Array.from({ length: cols.cols })
-                      .map((_, j) => children[i * cols.cols + j])
-                      .filter(c => c),
-                    (_, i) => i,
-                    ({ type, node }, j) =>
-                      html`
-                        ${j
-                          ? html`
-                              <div
-                                style=${styleMap({
-                                  display: 'table-cell',
-                                  width: toPx(cols.gap[1]),
-                                })}
-                              />
-                            `
-                          : null}
-                        ${type === 'inline'
-                          ? html`
-                              <div
-                                style=${styleMap({
-                                  display: 'table-cell',
-                                  padding: '1px 0',
-                                })}
-                              >
-                                <div
-                                  style=${styleMap({
-                                    margin: getDirs(
-                                      Math.floor(context.pad) - 1,
-                                      Math.ceil(context.pad) - 1,
-                                    ),
-                                  })}
-                                >
-                                  ${node}
-                                </div>
-                              </div>
-                            `
-                          : type === 'box'
-                          ? node('table-cell')
-                          : html`
-                              <div style=${styleMap({ display: 'table-cell' })}>
-                                ${node}
-                              </div>
-                            `}
-                      `,
-                  )}
-                </div>
-              `,
-          ),
-          'cols',
-        ),
-      };
-    }
-
-    const isInline = children.map(c => c.type === 'inline');
-    return {
-      type: 'box',
-      node: (display = 'block') =>
-        renderBox(
-          {
-            padding: getDirs(
-              box.pad[0] + 1,
-              box.pad[2] + 1,
-              box.pad[3],
-              box.pad[1],
-            ),
-            display,
-          },
-          html`
-            <div
-              style=${styleMap({
-                ...textStyle,
-                margin: getDirs(
-                  (isInline[0] ? Math.floor(context.pad) : 0) - 1,
-                  (isInline[isInline.length - 1] ? Math.ceil(context.pad) : 0) -
-                    1,
-                ),
-              })}
-              >${repeat<any>(
-                children,
-                (_, i) => i,
-                ({ type, node }, i) =>
-                  type === 'inline'
-                    ? node
-                    : html`
-                        <div style=${styleMap({ padding: '1px 0' })}>
-                          <div
-                            style=${styleMap({
-                              margin: getDirs(
-                                (isInline[i - 1]
-                                  ? Math.floor(context.pad)
-                                  : 0) - 1,
-                                (isInline[i + 1] ? Math.ceil(context.pad) : 0) -
-                                  1,
-                              ),
-                            })}
-                          >
-                            ${type === 'box' ? node() : node}
-                          </div>
-                        </div>
-                      `,
-              )}</div
-            >
-          `,
-          'box',
-        ),
-    };
   });
-  dispose() {
-    if (this.observer) this.observer.disconnect();
-    this.observer = false;
-  }
-}
+  return result;
+};
 
-export default node => {
-  const root = new Node();
-  const context = {};
-  return data => {
-    if (data) render(root.update(data, context).node, node);
-    else root.dispose();
-  };
+const isObject = x => Object.prototype.toString.call(x) === '[object Object]';
+const diffObjs = (next, prev) => {
+  const result = {};
+  Array.from(
+    new Set([...Object.keys(next), ...Object.keys(prev || {})]),
+  ).forEach(k => {
+    if (next[k] !== (prev || {})[k]) {
+      result[k] = isObject(next[k])
+        ? diffObjs(next[k], (prev || {})[k])
+        : next[k];
+    }
+  });
+  return result;
+};
+const applyObj = (target, obj) => {
+  Object.keys(obj).forEach(k => {
+    if (!isObject(obj[k])) {
+      target[k] = obj[k] === undefined ? null : obj[k];
+    } else {
+      applyObj(target[k], obj[k]);
+    }
+  });
+  return target;
+};
+
+const createNode = type =>
+  type === 'text' ? document.createTextNode('') : document.createElement(type);
+
+const getNodeInfo = data => {
+  if (data.type === 'value') return { type: 'text', props: data.value };
+  const {
+    values: { ['']: type, ...props },
+    indices,
+  } = unpack(data.value);
+  return { type: type?.type === 'value' ? type.value : 'div', props, indices };
+};
+
+const getNode = (data, prev) => {
+  if (prev?.__data === data) return prev;
+
+  const info = getNodeInfo(data);
+  const node =
+    info.type === prev?.nodeName.replace('#', '').toLowerCase()
+      ? prev
+      : createNode(info.type);
+  if (info.type === 'text') {
+    node.textContent = info.props;
+  } else {
+    const { hover, click, enter, focus, ...otherProps } = info.props;
+    const props = {
+      ...Object.keys(otherProps).reduce(
+        (res, k) => ({ ...res, [k]: toJs(info.props[k]) }),
+        {},
+      ),
+      onmouseenter: hover?.push && (() => hover?.push(fromJs(true))),
+      onmouseleave: hover?.push && (() => hover?.push(fromJs(false))),
+      onmousedown:
+        click?.push &&
+        (e => {
+          if (e.button === 0) click?.push(fromJs(null));
+        }),
+      onkeypress:
+        enter?.push &&
+        (e => {
+          if (e.keyCode === 13) enter?.push(fromJs(null));
+        }),
+      onfocus: focus?.push && (() => focus?.push(fromJs(true))),
+      onblur: focus?.push && (() => focus?.push(fromJs(false))),
+      oninput:
+        otherProps.value?.push &&
+        (e => otherProps.value?.push(fromJs(e.target.value))),
+    } as any;
+
+    // ? {
+    //   overflow: 'hidden',
+    //   cursor: 'pointer',
+    //   userSelect: 'none',
+    //   WebkitUserSelect: 'none',
+    //   MozUserSelect: 'none',
+    //   msUserSelect: 'none',
+    // }
+
+    if (focus?.value) setTimeout(() => node.focus());
+
+    const diff = diffObjs(props, node.__props || {});
+    applyObj(node, diff);
+    node.__props = props;
+    updateChildren(node, info.indices);
+  }
+  node.__data = data;
+  return node;
+};
+
+const updateChildren = (node, indices) => {
+  const children = [...node.childNodes];
+  for (let i = 0; i < Math.max(children.length, indices.length); i++) {
+    if (!indices[i]) {
+      node.removeChild(children[i]);
+    } else {
+      const prev = children[i];
+      const next = getNode(indices[i], prev);
+      if (!prev) node.appendChild(next);
+      else if (next !== prev) node.replaceChild(next, prev);
+    }
+  }
+};
+
+export default node => data => {
+  if (data) {
+    updateChildren(node, [data]);
+  } else {
+    while (node.lastChild) node.removeChild(node.lastChild);
+  }
 };

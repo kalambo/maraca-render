@@ -1,6 +1,6 @@
 {
   "name": "maraca-render",
-  "version": "0.5.0",
+  "version": "0.6.0",
   "license": "MIT",
   "main": "lib/index.js",
   "types": "./lib/index.d.ts",
@@ -16,14 +16,12 @@
     "htmlWhitespaceSensitivity": "strict"
   },
   "dependencies": {
-    "@juggle/resize-observer": "^3.0.2",
-    "lit-html": "^1.1.2",
-    "maraca": "^0.6.0",
-    "uuid": "^3.4.0"
+    "@juggle/resize-observer": "^3.1.0",
+    "maraca": "^0.6.1"
   },
   "devDependencies": {
     "prettier": "^1.19.1",
     "rimraf": "^3.0.2",
-    "typescript": "^3.7.5"
+    "typescript": "^3.8.3"
   }
 }
