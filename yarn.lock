@@ -2,10 +2,10 @@
 # yarn lockfile v1
 
 
-"@juggle/resize-observer@^3.1.0":
-  version "3.1.0"
-  resolved "https://registry.yarnpkg.com/@juggle/resize-observer/-/resize-observer-3.1.0.tgz#cb4c4d3d57bb7282b660dcf10e15d951810a2de7"
-  integrity sha512-hB+ptdOHs1/w8689M+MhtsxAGt7RyadyYKAYlhSedyA4XxPBl0QVA3zxaNSrQiVunAwlRaM7vUDuPwnnKp3BPg==
+"@juggle/resize-observer@^3.1.2":
+  version "3.1.2"
+  resolved "https://registry.yarnpkg.com/@juggle/resize-observer/-/resize-observer-3.1.2.tgz#e2b4ee9e50ac36e957e34031055f5ddc8494a9e2"
+  integrity sha512-Yao5AFq8HKHsyLCLZn15BybqN67cdbgDbVDnnaN54IUaffkwDHj0VMgBp1C/IxOsFsNltsI7LdnW4GEHmQarLQ==
 
 balanced-match@^1.0.0:
   version "1.0.0"
@@ -101,10 +101,10 @@ is-buffer@^1.1.4:
   resolved "https://registry.yarnpkg.com/is-buffer/-/is-buffer-1.1.6.tgz#efaa2ea9daa0d7ab2ea13a97b2b8ad51fefbe8be"
   integrity sha512-NcdALwpXkTm5Zvvbk7owOUSvVvBKDgKP5/ewfXEznmQFfs4ZRmanOeKBTjRVjka3QFoN6XJ+9F3USqfHqTaU5w==
 
-maraca@^0.6.1:
-  version "0.6.1"
-  resolved "https://registry.yarnpkg.com/maraca/-/maraca-0.6.1.tgz#014b7660d59257561d086957f1a17ad362c4fed8"
-  integrity sha512-GdDuju6lgCb6H6YaTippKMB83gjPXYtEtHo4Zesi1wcSrgy1r+mfWith8kAmQtfTjjETIVA3+UAl1p5tUO5BcQ==
+maraca@^0.6.2:
+  version "0.6.2"
+  resolved "https://registry.yarnpkg.com/maraca/-/maraca-0.6.2.tgz#09c82d57b3f81a97288daca7daac35915323d1a3"
+  integrity sha512-Yys6CrxNHZ8l7DIqw8RRC6Q5TQ5QacZDCncAH4ZxkVbjfmkyHr/fdZDxRa+EaiJK+0K8yYegUjf4T6SIg8cs4A==
   dependencies:
     ohm-js "^0.14.0"
 
@@ -142,10 +142,10 @@ path-is-absolute@^1.0.0:
   resolved "https://registry.yarnpkg.com/path-is-absolute/-/path-is-absolute-1.0.1.tgz#174b9268735534ffbc7ace6bf53a5a9e1b5c5f5f"
   integrity sha1-F0uSaHNVNP+8es5r9TpanhtcX18=
 
-prettier@^1.19.1:
-  version "1.19.1"
-  resolved "https://registry.yarnpkg.com/prettier/-/prettier-1.19.1.tgz#f7d7f5ff8a9cd872a7be4ca142095956a60797cb"
-  integrity sha512-s7PoyDv/II1ObgQunCbB9PdLmUcBZcnWOcxDh7O0N/UwDEsHyqkW+Qh28jW+mVuCdx7gLB0BotYI1Y6uI9iyew==
+prettier@^2.0.0:
+  version "2.0.0"
+  resolved "https://registry.yarnpkg.com/prettier/-/prettier-2.0.0.tgz#9c8fdba0aeae3faf0d9d9391623ac4f9321a4455"
+  integrity sha512-vI55PC+GFLOVtpwr2di1mYhJF36v+kztJov8sx3AmqbfdA+2Dhozxb+3e1hTgoV9lyhnVJFF3Z8GCVeMBOS1bA==
 
 rimraf@^3.0.2:
   version "3.0.2"
