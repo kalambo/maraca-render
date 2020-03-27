@@ -1,32 +1,6 @@
 import { fromJs } from 'maraca';
-
-// import { ResizeObserver } from '@juggle/resize-observer';
-// setResize = memo(false, false, node => {
-//   if (this.observer !== false) {
-//     if (this.observer) {
-//       this.observer.disconnect();
-//       this.observer = null;
-//     }
-//     if (node) {
-//       this.observer = new ResizeObserver(entries => {
-//         const { inlineSize, blockSize } = entries[0].borderBoxSize[0];
-//         this.onResize(inlineSize, blockSize);
-//       });
-//       this.observer.observe(node);
-//     }
-//   }
-// });
-// this.onResize = (width, height) => {
-//   if (values.width?.push) values.width?.push(fromJs(width));
-//   if (values.height?.push) values.height?.push(fromJs(height));
-// };
-// setTimeout(() =>
-//   this.setResize(
-//     values.width?.push || values.height?.push
-//       ? document.getElementById(this.id)
-//       : null,
-//   ),
-// );
+import { ResizeObserver } from '@juggle/resize-observer';
+import * as throttle from 'lodash.throttle';
 
 const toJs = (data) => {
   if (data.type === 'value') return data.value;
@@ -45,7 +19,7 @@ const toIndex = (v: string) => {
 const unpack = (value) => {
   const result = { values: {} as any, indices: [] as any[] };
   value.toPairs().forEach(({ key, value }) => {
-    if (key.type !== 'box') {
+    if (key.type !== 'block') {
       const i = toIndex(key.value || '');
       if (i) result.indices[i - 1] = value;
       else result.values[key.value || ''] = value;
@@ -169,6 +143,16 @@ const eventProperties = {
 const pick = (obj, keys) =>
   keys.reduce((res, k) => ({ ...res, [k]: obj[k] }), {});
 
+const disposeNode = (root, node) => {
+  [...node.childNodes].forEach((c) => disposeNode(root, c));
+  root.remove(node);
+  if (node.__observer) {
+    node.__observer.disconnect();
+    node.__resize = null;
+    node.__observer = null;
+  }
+};
+
 const getNode = (root, { data, info }, prev) => {
   if (prev?.__data === data) return prev;
 
@@ -179,7 +163,7 @@ const getNode = (root, { data, info }, prev) => {
   if (info.type === 'text') {
     node.textContent = info.props;
   } else {
-    const { hover, click, enter, focus, ...otherProps } = info.props;
+    const { hover, click, enter, focus, rect, ...otherProps } = info.props;
     const props = {
       ...Object.keys(otherProps).reduce(
         (res, k) => ({ ...res, [k]: toJs(info.props[k]) }),
@@ -214,6 +198,26 @@ const getNode = (root, { data, info }, prev) => {
     const diff = diffObjs(props, node.__props || {});
     applyObj(node, diff);
     node.__props = props;
+
+    if (rect?.push) {
+      node.__resizePush = rect.push;
+      if (!node.__observer) {
+        node.__resize = throttle(() => {
+          const { top, left, height, width } = node.getBoundingClientRect();
+          node.__resizePush(fromJs({ top, left, height, width }));
+        }, 100);
+        node.__observer = new ResizeObserver(node.__resize);
+        node.__observer.observe(node);
+        window.addEventListener('resize', node.__resize);
+      }
+    } else if (node.__resize) {
+      node.__observer.disconnect();
+      window.removeEventListener('resize', node.__resize);
+      node.__resizePush = null;
+      node.__resize = null;
+      node.__observer = null;
+    }
+
     updateChildren(root, node, info.indices);
   }
   node.__data = data;
@@ -225,14 +229,14 @@ const updateChildrenSet = (root, node, indices) => {
   for (let i = 0; i < Math.max(children.length, indices.length); i++) {
     const prev = children[i];
     if (!indices[i]) {
-      root.remove(prev);
+      disposeNode(root, prev);
       node.removeChild(prev);
     } else {
       const next = getNode(root, indices[i], prev);
       if (!prev) {
         node.appendChild(next);
       } else if (next !== prev) {
-        root.remove(prev);
+        disposeNode(root, prev);
         node.replaceChild(next, prev);
       }
     }
@@ -260,7 +264,10 @@ export default (node) => {
     if (data) {
       updateChildren(root, rootNode, [data]);
     } else {
-      while (node.lastChild) node.removeChild(node.lastChild);
+      while (node.lastChild) {
+        disposeNode(root, node.lastChild);
+        node.removeChild(node.lastChild);
+      }
     }
   };
 };

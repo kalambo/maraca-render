@@ -1,6 +1,6 @@
 {
   "name": "maraca-render",
-  "version": "0.6.0",
+  "version": "0.6.1",
   "license": "MIT",
   "main": "lib/index.js",
   "types": "./lib/index.d.ts",
@@ -17,10 +17,11 @@
   },
   "dependencies": {
     "@juggle/resize-observer": "^3.1.2",
-    "maraca": "^0.6.2"
+    "lodash.throttle": "^4.1.1",
+    "maraca": "^0.6.3"
   },
   "devDependencies": {
-    "prettier": "^2.0.0",
+    "prettier": "^2.0.2",
     "rimraf": "^3.0.2",
     "typescript": "^3.8.3"
   }
