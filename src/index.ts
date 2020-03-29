@@ -1,8 +1,29 @@
-import { Block, fromJs } from 'maraca';
+import { fromJs } from 'maraca';
 import { ResizeObserver } from '@juggle/resize-observer';
 import * as throttle from 'lodash.throttle';
 
+const onChanges = [] as any[];
+const resizeObserver = new ResizeObserver((entries) => {
+  for (const entry of entries) (entry.target as any).__resize();
+});
+window.addEventListener('resize', () => {
+  for (const onChange of onChanges) onChange();
+});
+const observeSize = (node, onChange) => {
+  onChanges.push(onChange);
+  node.__resize = onChange;
+  resizeObserver.observe(node);
+};
+const unobserveSize = (node) => {
+  if (node.__resize) {
+    onChanges.splice(onChanges.indexOf(node.__resize), 1);
+    delete node.__resize;
+    resizeObserver.unobserve(node);
+  }
+};
+
 const toJs = (data) => {
+  if (!data) return null;
   if (data.type === 'value') return data.value;
   return data.value
     .toPairs()
@@ -112,14 +133,52 @@ class Root {
 
 const disposeNode = (root, node) => {
   [...node.childNodes].forEach((c) => disposeNode(root, c));
-  if (node.__observer) {
-    node.__observer.disconnect();
-    node.__observer = null;
-    node.__setMouseBox.flush();
-    window.removeEventListener('resize', node.__setMouseBox);
-  }
+  unobserveSize(node);
+  if (node.__setMouseBox) node.__setMouseBox.cancel();
   root.remove(node);
 };
+
+const getNodeBox = (node) => {
+  const { top, left, height, width } = node.getBoundingClientRect();
+  return { top, left, height, width };
+};
+
+class EventQueue {
+  queues = {};
+  set(key, value) {
+    this.queues[key] = this.queues[key] || [];
+    if (this.queues[key][this.queues[key].length - 1] !== value) {
+      this.queues[key].push(value);
+    }
+  }
+  update(data, filterKeys) {
+    const v = toJs(data);
+    const obj = isObject(v) ? v : {};
+    const result = {};
+    for (const k of Object.keys({ ...obj, ...this.queues }).filter(
+      (k) => !filterKeys || filterKeys.includes(k),
+    )) {
+      result[k] = obj[k] || '';
+      if (this.queues[k]) {
+        const queued = this.queues[k][0];
+        if (
+          (queued && ['down', 'true'].includes(result[k])) ||
+          (!queued && ['up', ''].includes(result[k]))
+        ) {
+          this.queues[k].shift();
+          if (this.queues[k].length === 0) delete this.queues[k];
+        }
+      }
+      result[k] = { down: 'true', true: 'true', up: '', '': '' }[result[k]];
+      if (this.queues[k]) result[k] = this.queues[k][0] ? 'down' : 'up';
+      if (!result[k]) delete result[k];
+    }
+    return result;
+  }
+  clear() {
+    this.queues = {};
+  }
+}
 
 const getNode = (root, { data, info }, prev) => {
   if (prev?.__data === data) return prev;
@@ -141,24 +200,46 @@ const getNode = (root, { data, info }, prev) => {
       ...other
     } = info.props;
 
-    node.__setBox = box?.push;
-    node.__setMouse = mouse?.push;
-    if (!node.__setMouseBox) {
-      node.__setMouseBoxBase = (mouseInfo) => {
-        if (node.__setBox) {
-          const { top, left, height, width } = node.getBoundingClientRect();
-          node.__setBox(fromJs({ top, left, height, width }));
-        }
+    const [stopKeysValues, stopMouseValues] = [stopKeys, stopMouse].map((d) => {
+      const v = toJs(d);
+      return Object.keys(isObject(v) ? v : {})
+        .map((k) => v[k])
+        .filter((x) => typeof x === 'string');
+    });
 
-        if (node.__mouse) {
-          ['Left', 'Middle', 'Right'].forEach((b) => {
-            node.__mouse[b] = node.__mouse[b] && node.__mouse[b] !== 'up';
-          });
-          node.__mouse = { ...node.__mouse, ...(mouseInfo || {}) };
+    if (!node.__keysQueue) node.__keysQueue = new EventQueue();
+    const keyFunc = (dir) =>
+      (keys?.push || stopKeysValues.length > 0) &&
+      ((e) => {
+        if (keys?.push) {
+          node.__keysQueue.set(e.key, dir);
+          keys.push(fromJs(node.__keysQueue.update(keys)));
         }
-        if (node.__setMouse && node.__mouse !== undefined) {
-          node.__setMouse(fromJs(node.__mouse));
-          if (node.__mouse === null) delete node.__mouse;
+        if (stopKeysValues.includes(e.key)) e.preventDefault();
+      });
+
+    if (!node.__mouseQueue) node.__mouseQueue = new EventQueue();
+    node.__setBox = box?.push;
+    node.__mouse = mouse;
+    if (!node.__setMouseBox) {
+      node.__setMouseBoxBase = ({ box, mouse }) => {
+        if (node.__setBox) node.__setBox(fromJs(box));
+        if (node.__mouse?.push && mouse !== undefined) {
+          if (!mouse) {
+            node.__mouseQueue.clear();
+            node.__mouse?.push(fromJs(null));
+          } else {
+            node.__mouse?.push(
+              fromJs({
+                ...node.__mouseQueue.update(node.__mouse, [
+                  'left',
+                  'middle',
+                  'right',
+                ]),
+                ...mouse,
+              }),
+            );
+          }
         }
       };
       node.__setMouseBox = throttle(node.__setMouseBoxBase, 50);
@@ -166,102 +247,49 @@ const getNode = (root, { data, info }, prev) => {
 
     if (!box?.push !== !node.__observer) {
       if (box?.push) {
-        node.__observer = new ResizeObserver(node.__setMouseBox);
-        node.__observer.observe(node);
-        window.addEventListener('resize', node.__setMouseBox);
+        observeSize(node, () => node.__setMouseBox({ box: getNodeBox(node) }));
       } else {
-        node.__observer.disconnect();
-        node.__observer = null;
-        node.__setMouseBox.flush();
-        window.removeEventListener('resize', node.__setMouseBox);
+        unobserveSize(node);
       }
     }
 
-    const stopKeyValues =
-      stopKeys?.type === 'block'
-        ? stopKeys.value
-            .toPairs()
-            .map((x) => x.value.type === 'value' && x.value.value)
-            .filter((x) => x)
-        : [];
-    const stopMouseValues =
-      stopMouse?.type === 'block'
-        ? stopMouse.value
-            .toPairs()
-            .map((x) => x.value.type === 'value' && x.value.value)
-            .filter((x) => x)
-        : [];
+    const mouseFunc = (dir) =>
+      (mouse?.push || stopMouseValues.length > 0) &&
+      ((e) => {
+        const button = { 0: 'left', 1: 'middle', 2: 'right' }[e.button];
+        if (button) {
+          node.__mouseQueue.set(button, dir);
+          node.__setMouseBox.cancel();
+          node.__setMouseBoxBase({
+            box: getNodeBox(node),
+            mouse: { x: e.clientX, y: e.clientY },
+          });
+          if (stopMouseValues.includes(button)) e.preventDefault();
+        }
+      });
+    const mouseMoveFunc = (throttle, leave) =>
+      mouse?.push &&
+      ((e) => {
+        if (!throttle) node.__setMouseBox.cancel();
+        (throttle ? node.__setMouseBox : node.__setMouseBoxBase)({
+          box: getNodeBox(node),
+          mouse: leave ? null : { x: e.clientX, y: e.clientY },
+        });
+      });
+
     const props = {
       ...Object.keys(other).reduce(
         (res, k) => ({ ...res, [k]: toJs(info.props[k]) }),
         {},
       ),
-      onkeydown:
-        (keys?.push || stopKeyValues.length > 0) &&
-        ((e) => {
-          if (keys?.push) {
-            keys.push({
-              type: 'block',
-              value: Block.fromPairs([
-                ...(keys.type === 'block' ? keys.value.toPairs() : [])
-                  .map((x) => ({
-                    key: x.key,
-                    value: fromJs(x.value.value !== 'up'),
-                  }))
-                  .filter((x) => x.value.value),
-                { key: fromJs(e.key), value: fromJs('down') },
-              ]),
-            });
-          }
-          if (stopKeyValues.includes(e.key)) e.preventDefault();
-        }),
-      onkeyup:
-        (keys?.push || stopKeyValues.length > 0) &&
-        ((e) => {
-          if (keys?.push) {
-            keys.push({
-              type: 'block',
-              value: Block.fromPairs([
-                ...(keys.type === 'block' ? keys.value.toPairs() : [])
-                  .map((x) => ({
-                    key: x.key,
-                    value: fromJs(x.value.value !== 'up'),
-                  }))
-                  .filter((x) => x.value.value),
-                { key: fromJs(e.key), value: fromJs('up') },
-              ]),
-            });
-          }
-          if (stopKeyValues.includes(e.key)) e.preventDefault();
-        }),
-      onmousedown:
-        (mouse?.push || stopMouseValues.length > 0) &&
-        ((e) => {
-          const button = { 0: 'Left', 1: 'Middle', 2: 'Right' }[e.button];
-          if (button) {
-            node.__mouse = node.__mouse || {};
-            node.__mouse.x = e.clientX;
-            node.__mouse.y = e.clientY;
-            node.__setMouseBoxBase({ [button]: 'down' });
-            if (stopMouseValues.includes(button)) e.preventDefault();
-          }
-        }),
-      onmouseup:
-        (mouse?.push || stopMouseValues.length > 0) &&
-        ((e) => {
-          const button = { 0: 'Left', 1: 'Middle', 2: 'Right' }[e.button];
-          if (button) {
-            node.__mouse = node.__mouse || {};
-            node.__mouse.x = e.clientX;
-            node.__mouse.y = e.clientY;
-            node.__setMouseBoxBase({ [button]: 'up' });
-            if (stopMouseValues.includes(button)) e.preventDefault();
-          }
-        }),
+      onkeydown: keyFunc(true),
+      onkeyup: keyFunc(false),
+      onmousedown: mouseFunc(true),
+      onmouseup: mouseFunc(false),
       onclick:
         stopMouseValues.length > 0 &&
         ((e) => {
-          const button = { 0: 'Left', 1: 'Middle', 2: 'Right' }[e.button];
+          const button = { 0: 'left', 1: 'middle', 2: 'right' }[e.button];
           if (button && stopMouseValues.includes(button)) e.preventDefault();
         }),
       oncontextmenu:
@@ -269,28 +297,9 @@ const getNode = (root, { data, info }, prev) => {
         ((e) => {
           if (stopMouseValues.includes('Right')) e.preventDefault();
         }),
-      onmousemove:
-        mouse?.push &&
-        ((e) => {
-          node.__mouse = node.__mouse || {};
-          node.__mouse.x = e.clientX;
-          node.__mouse.y = e.clientY;
-          node.__setMouseBox();
-        }),
-      onmouseenter:
-        mouse?.push &&
-        ((e) => {
-          node.__mouse = node.__mouse || {};
-          node.__mouse.x = e.clientX;
-          node.__mouse.y = e.clientY;
-          node.__setMouseBoxBase();
-        }),
-      onmouseleave:
-        mouse?.push &&
-        (() => {
-          node.__mouse = null;
-          node.__setMouseBoxBase();
-        }),
+      onmouseenter: mouseMoveFunc(false, false),
+      onmousemove: mouseMoveFunc(true, false),
+      onmouseleave: mouseMoveFunc(false, true),
       onfocus: focus?.push && (() => focus?.push(fromJs(true))),
       onblur: focus?.push && (() => focus?.push(fromJs(false))),
       oninput:
