@@ -1,4 +1,4 @@
-import { fromJs } from 'maraca';
+import { Block, fromJs } from 'maraca';
 import { ResizeObserver } from '@juggle/resize-observer';
 import * as throttle from 'lodash.throttle';
 
@@ -110,47 +110,15 @@ class Root {
   }
 }
 
-const eventProperties = {
-  mouse: [
-    'altKey',
-    'button',
-    'buttons',
-    'clientX',
-    'clientY',
-    'ctrlKey',
-    'metaKey',
-    'movementX',
-    'movementY',
-    'region',
-    'screenX',
-    'screenY',
-    'shiftKey',
-  ],
-  keyboard: [
-    'altKey',
-    'code',
-    'ctrlKey',
-    'isComposing',
-    'key',
-    'locale',
-    'location',
-    'metaKey',
-    'repeat',
-    'shiftKey',
-  ],
-};
-
-const pick = (obj, keys) =>
-  keys.reduce((res, k) => ({ ...res, [k]: obj[k] }), {});
-
 const disposeNode = (root, node) => {
   [...node.childNodes].forEach((c) => disposeNode(root, c));
-  root.remove(node);
   if (node.__observer) {
     node.__observer.disconnect();
-    node.__resize = null;
     node.__observer = null;
+    node.__setMouseBox.flush();
+    window.removeEventListener('resize', node.__setMouseBox);
   }
+  root.remove(node);
 };
 
 const getNode = (root, { data, info }, prev) => {
@@ -163,60 +131,177 @@ const getNode = (root, { data, info }, prev) => {
   if (info.type === 'text') {
     node.textContent = info.props;
   } else {
-    const { hover, click, enter, focus, rect, ...otherProps } = info.props;
+    const {
+      focus,
+      keys,
+      stopKeys,
+      mouse,
+      stopMouse,
+      box,
+      ...other
+    } = info.props;
+
+    node.__setBox = box?.push;
+    node.__setMouse = mouse?.push;
+    if (!node.__setMouseBox) {
+      node.__setMouseBoxBase = (mouseInfo) => {
+        if (node.__setBox) {
+          const { top, left, height, width } = node.getBoundingClientRect();
+          node.__setBox(fromJs({ top, left, height, width }));
+        }
+
+        if (node.__mouse) {
+          ['Left', 'Middle', 'Right'].forEach((b) => {
+            node.__mouse[b] = node.__mouse[b] && node.__mouse[b] !== 'up';
+          });
+          node.__mouse = { ...node.__mouse, ...(mouseInfo || {}) };
+        }
+        if (node.__setMouse && node.__mouse !== undefined) {
+          node.__setMouse(fromJs(node.__mouse));
+          if (node.__mouse === null) delete node.__mouse;
+        }
+      };
+      node.__setMouseBox = throttle(node.__setMouseBoxBase, 50);
+    }
+
+    if (!box?.push !== !node.__observer) {
+      if (box?.push) {
+        node.__observer = new ResizeObserver(node.__setMouseBox);
+        node.__observer.observe(node);
+        window.addEventListener('resize', node.__setMouseBox);
+      } else {
+        node.__observer.disconnect();
+        node.__observer = null;
+        node.__setMouseBox.flush();
+        window.removeEventListener('resize', node.__setMouseBox);
+      }
+    }
+
+    const stopKeyValues =
+      stopKeys?.type === 'block'
+        ? stopKeys.value
+            .toPairs()
+            .map((x) => x.value.type === 'value' && x.value.value)
+            .filter((x) => x)
+        : [];
+    const stopMouseValues =
+      stopMouse?.type === 'block'
+        ? stopMouse.value
+            .toPairs()
+            .map((x) => x.value.type === 'value' && x.value.value)
+            .filter((x) => x)
+        : [];
     const props = {
-      ...Object.keys(otherProps).reduce(
+      ...Object.keys(other).reduce(
         (res, k) => ({ ...res, [k]: toJs(info.props[k]) }),
         {},
       ),
-      onmouseenter:
-        hover?.push &&
-        ((e) => hover?.push(fromJs(pick(e, eventProperties.mouse)))),
-      onmouseleave: hover?.push && (() => hover?.push(fromJs(false))),
-      onmousedown:
-        click?.push &&
+      onkeydown:
+        (keys?.push || stopKeyValues.length > 0) &&
         ((e) => {
-          if (e.button === 0) {
-            click?.push(fromJs(pick(e, eventProperties.mouse)));
+          if (keys?.push) {
+            keys.push({
+              type: 'block',
+              value: Block.fromPairs([
+                ...(keys.type === 'block' ? keys.value.toPairs() : [])
+                  .map((x) => ({
+                    key: x.key,
+                    value: fromJs(x.value.value !== 'up'),
+                  }))
+                  .filter((x) => x.value.value),
+                { key: fromJs(e.key), value: fromJs('down') },
+              ]),
+            });
+          }
+          if (stopKeyValues.includes(e.key)) e.preventDefault();
+        }),
+      onkeyup:
+        (keys?.push || stopKeyValues.length > 0) &&
+        ((e) => {
+          if (keys?.push) {
+            keys.push({
+              type: 'block',
+              value: Block.fromPairs([
+                ...(keys.type === 'block' ? keys.value.toPairs() : [])
+                  .map((x) => ({
+                    key: x.key,
+                    value: fromJs(x.value.value !== 'up'),
+                  }))
+                  .filter((x) => x.value.value),
+                { key: fromJs(e.key), value: fromJs('up') },
+              ]),
+            });
+          }
+          if (stopKeyValues.includes(e.key)) e.preventDefault();
+        }),
+      onmousedown:
+        (mouse?.push || stopMouseValues.length > 0) &&
+        ((e) => {
+          const button = { 0: 'Left', 1: 'Middle', 2: 'Right' }[e.button];
+          if (button) {
+            node.__mouse = node.__mouse || {};
+            node.__mouse.x = e.clientX;
+            node.__mouse.y = e.clientY;
+            node.__setMouseBoxBase({ [button]: 'down' });
+            if (stopMouseValues.includes(button)) e.preventDefault();
           }
         }),
-      onkeypress:
-        enter?.push &&
+      onmouseup:
+        (mouse?.push || stopMouseValues.length > 0) &&
         ((e) => {
-          if (e.keyCode === 13)
-            enter?.push(fromJs(pick(e, eventProperties.keyboard)));
+          const button = { 0: 'Left', 1: 'Middle', 2: 'Right' }[e.button];
+          if (button) {
+            node.__mouse = node.__mouse || {};
+            node.__mouse.x = e.clientX;
+            node.__mouse.y = e.clientY;
+            node.__setMouseBoxBase({ [button]: 'up' });
+            if (stopMouseValues.includes(button)) e.preventDefault();
+          }
+        }),
+      onclick:
+        stopMouseValues.length > 0 &&
+        ((e) => {
+          const button = { 0: 'Left', 1: 'Middle', 2: 'Right' }[e.button];
+          if (button && stopMouseValues.includes(button)) e.preventDefault();
+        }),
+      oncontextmenu:
+        stopMouseValues.length > 0 &&
+        ((e) => {
+          if (stopMouseValues.includes('Right')) e.preventDefault();
+        }),
+      onmousemove:
+        mouse?.push &&
+        ((e) => {
+          node.__mouse = node.__mouse || {};
+          node.__mouse.x = e.clientX;
+          node.__mouse.y = e.clientY;
+          node.__setMouseBox();
+        }),
+      onmouseenter:
+        mouse?.push &&
+        ((e) => {
+          node.__mouse = node.__mouse || {};
+          node.__mouse.x = e.clientX;
+          node.__mouse.y = e.clientY;
+          node.__setMouseBoxBase();
+        }),
+      onmouseleave:
+        mouse?.push &&
+        (() => {
+          node.__mouse = null;
+          node.__setMouseBoxBase();
         }),
       onfocus: focus?.push && (() => focus?.push(fromJs(true))),
       onblur: focus?.push && (() => focus?.push(fromJs(false))),
       oninput:
-        otherProps.value?.push &&
-        ((e) => otherProps.value?.push(fromJs(e.target.value))),
+        other.value?.push && ((e) => other.value?.push(fromJs(e.target.value))),
     } as any;
 
-    if (focus?.value) setTimeout(() => node.focus());
+    if (other.focus?.value) setTimeout(() => node.focus());
 
     const diff = diffObjs(props, node.__props || {});
     applyObj(node, diff);
     node.__props = props;
-
-    if (rect?.push) {
-      node.__resizePush = rect.push;
-      if (!node.__observer) {
-        node.__resize = throttle(() => {
-          const { top, left, height, width } = node.getBoundingClientRect();
-          node.__resizePush(fromJs({ top, left, height, width }));
-        }, 100);
-        node.__observer = new ResizeObserver(node.__resize);
-        node.__observer.observe(node);
-        window.addEventListener('resize', node.__resize);
-      }
-    } else if (node.__resize) {
-      node.__observer.disconnect();
-      window.removeEventListener('resize', node.__resize);
-      node.__resizePush = null;
-      node.__resize = null;
-      node.__observer = null;
-    }
 
     updateChildren(root, node, info.indices);
   }
