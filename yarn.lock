@@ -106,10 +106,10 @@ lodash.throttle@^4.1.1:
   resolved "https://registry.yarnpkg.com/lodash.throttle/-/lodash.throttle-4.1.1.tgz#c23e91b710242ac70c37f1e1cda9274cc39bf2f4"
   integrity sha1-wj6RtxAkKscMN/HhzaknTMOb8vQ=
 
-maraca@^0.6.4:
-  version "0.6.4"
-  resolved "https://registry.yarnpkg.com/maraca/-/maraca-0.6.4.tgz#7d929aa82f458f1e2dc520cfc562fdea498df075"
-  integrity sha512-kBwAJqJNVNYXd/c9+Ot+ENKqTl3EoW4lkFcW065vez/UjI9keW/aKTlBmQmnqpx4zpy6IAI6A0r39jGI46KtJA==
+maraca@^0.6.5:
+  version "0.6.5"
+  resolved "https://registry.yarnpkg.com/maraca/-/maraca-0.6.5.tgz#caf5cfca193765de532e207c355d090a73b09158"
+  integrity sha512-wIbwajYC6Xe6A7Ttr1fjO2vGUuFM9nHIG/qveLdeVwNYYt5lNZiFQGF/wsF1ZmAgfke4tToMWaD6nF8GfKRfmA==
   dependencies:
     ohm-js "^0.14.0"
 

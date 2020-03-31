@@ -2,21 +2,21 @@ import { fromJs } from 'maraca';
 import { ResizeObserver } from '@juggle/resize-observer';
 import * as throttle from 'lodash.throttle';
 
-const onChanges = [] as any[];
+const onSizeChanges = [] as any[];
 const resizeObserver = new ResizeObserver((entries) => {
   for (const entry of entries) (entry.target as any).__resize();
 });
 window.addEventListener('resize', () => {
-  for (const onChange of onChanges) onChange();
+  for (const onChange of onSizeChanges) onChange();
 });
 const observeSize = (node, onChange) => {
-  onChanges.push(onChange);
+  onSizeChanges.push(onChange);
   node.__resize = onChange;
   resizeObserver.observe(node);
 };
 const unobserveSize = (node) => {
   if (node.__resize) {
-    onChanges.splice(onChanges.indexOf(node.__resize), 1);
+    onSizeChanges.splice(onSizeChanges.indexOf(node.__resize), 1);
     delete node.__resize;
     resizeObserver.unobserve(node);
   }
@@ -147,7 +147,13 @@ class EventQueue {
   queues = {};
   set(key, value) {
     this.queues[key] = this.queues[key] || [];
-    if (this.queues[key][this.queues[key].length - 1] !== value) {
+    const prev = this.queues[key][this.queues[key].length - 1];
+    if (
+      (prev === 'true' && value === 'down') ||
+      (prev === '' && value === 'up')
+    ) {
+      this.queues[key][this.queues[key].length - 1] = value;
+    } else if (prev !== value) {
       this.queues[key].push(value);
     }
   }
@@ -162,15 +168,16 @@ class EventQueue {
       if (this.queues[k]) {
         const queued = this.queues[k][0];
         if (
-          (queued && ['down', 'true'].includes(result[k])) ||
-          (!queued && ['up', ''].includes(result[k]))
+          (['down', 'true'].includes(queued) &&
+            ['down', 'true'].includes(result[k])) ||
+          (['up', ''].includes(queued) && ['up', ''].includes(result[k]))
         ) {
           this.queues[k].shift();
           if (this.queues[k].length === 0) delete this.queues[k];
         }
       }
       result[k] = { down: 'true', true: 'true', up: '', '': '' }[result[k]];
-      if (this.queues[k]) result[k] = this.queues[k][0] ? 'down' : 'up';
+      if (this.queues[k]) result[k] = this.queues[k][0];
       if (!result[k]) delete result[k];
     }
     return result;
@@ -252,6 +259,7 @@ const getNode = (root, { data, info }, prev) => {
         unobserveSize(node);
       }
     }
+    node.onscroll = () => onSizeChanges.forEach((x) => x());
 
     const mouseFunc = (dir) =>
       (mouse?.push || stopMouseValues.length > 0) &&
@@ -270,6 +278,15 @@ const getNode = (root, { data, info }, prev) => {
     const mouseMoveFunc = (throttle, leave) =>
       mouse?.push &&
       ((e) => {
+        const [left, right, middle] = e.buttons
+          .toString(2)
+          .split('')
+          .reverse()
+          .map((x) => x === '1');
+        if (left) node.__mouseQueue.set('left', 'true');
+        if (right) node.__mouseQueue.set('right', 'true');
+        if (middle) node.__mouseQueue.set('middle', 'true');
+
         if (!throttle) node.__setMouseBox.cancel();
         (throttle ? node.__setMouseBox : node.__setMouseBoxBase)({
           box: getNodeBox(node),
@@ -282,10 +299,10 @@ const getNode = (root, { data, info }, prev) => {
         (res, k) => ({ ...res, [k]: toJs(info.props[k]) }),
         {},
       ),
-      onkeydown: keyFunc(true),
-      onkeyup: keyFunc(false),
-      onmousedown: mouseFunc(true),
-      onmouseup: mouseFunc(false),
+      onkeydown: keyFunc('down'),
+      onkeyup: keyFunc('up'),
+      onmousedown: mouseFunc('down'),
+      onmouseup: mouseFunc('up'),
       onclick:
         stopMouseValues.length > 0 &&
         ((e) => {
@@ -300,8 +317,17 @@ const getNode = (root, { data, info }, prev) => {
       onmouseenter: mouseMoveFunc(false, false),
       onmousemove: mouseMoveFunc(true, false),
       onmouseleave: mouseMoveFunc(false, true),
-      onfocus: focus?.push && (() => focus?.push(fromJs(true))),
-      onblur: focus?.push && (() => focus?.push(fromJs(false))),
+      onfocus:
+        focus?.push &&
+        (() => {
+          focus?.push(fromJs(true));
+        }),
+      onblur:
+        focus?.push &&
+        (() => {
+          node.__keysQueue.clear();
+          focus?.push(fromJs(false));
+        }),
       oninput:
         other.value?.push && ((e) => other.value?.push(fromJs(e.target.value))),
     } as any;
