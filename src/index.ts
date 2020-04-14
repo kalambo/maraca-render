@@ -10,9 +10,11 @@ window.addEventListener('resize', () => {
   for (const onChange of onSizeChanges) onChange();
 });
 const observeSize = (node, onChange) => {
-  onSizeChanges.push(onChange);
-  node.__resize = onChange;
-  resizeObserver.observe(node);
+  if (!node.__resize) {
+    onSizeChanges.push(onChange);
+    node.__resize = onChange;
+    resizeObserver.observe(node);
+  }
 };
 const unobserveSize = (node) => {
   if (node.__resize) {
@@ -49,6 +51,12 @@ const unpack = (value) => {
   return result;
 };
 
+const kebabToCamel = (s) =>
+  s
+    .split('-')
+    .map((x, i) => (i === 0 ? x : `${x[0].toUpperCase()}${x.slice(1)}`))
+    .join('');
+
 const isObject = (x) => Object.prototype.toString.call(x) === '[object Object]';
 const diffObjs = (next, prev) => {
   const result = {};
@@ -66,11 +74,18 @@ const diffObjs = (next, prev) => {
 const applyObj = (target, obj) => {
   Object.keys(obj).forEach((k) => {
     if (!isObject(obj[k])) {
-      if (['svg', 'path'].includes(target.tagName?.toLowerCase())) {
-        target.setAttribute(k, obj[k] === undefined ? null : obj[k]);
-      } else {
-        target[k] = obj[k] === undefined ? null : obj[k];
-      }
+      try {
+        if (['svg', 'path'].includes(target.tagName?.toLowerCase())) {
+          target.setAttribute(k, obj[k] === undefined ? null : obj[k]);
+        } else if (
+          Object.prototype.toString.call(target) ===
+          '[object CSSStyleDeclaration]'
+        ) {
+          target[kebabToCamel(k)] = obj[k] === undefined ? null : obj[k];
+        } else {
+          target[k] = obj[k] === undefined ? null : obj[k];
+        }
+      } catch {}
     } else {
       applyObj(target[k], obj[k]);
     }
@@ -78,12 +93,19 @@ const applyObj = (target, obj) => {
   return target;
 };
 
-const createNode = (type) =>
-  type === 'text'
-    ? document.createTextNode('')
-    : ['svg', 'path'].includes(type)
-    ? document.createElementNS('http://www.w3.org/2000/svg', type)
-    : document.createElement(type);
+const createNode = (type) => {
+  if (type === 'text') {
+    return document.createTextNode('');
+  }
+  if (['svg', 'path'].includes(type)) {
+    return document.createElementNS('http://www.w3.org/2000/svg', type);
+  }
+  try {
+    return document.createElement(type);
+  } catch {
+    return document.createElement('div');
+  }
+};
 
 const getNodeInfo = (data) => {
   if (data.type === 'value') return { type: 'text', props: data.value };
@@ -93,7 +115,7 @@ const getNodeInfo = (data) => {
   } = unpack(data.value);
   const typeValue = type?.type === 'value' ? type.value : 'div';
   return {
-    type: typeValue.startsWith(' ') ? typeValue.slice(1) || 'div' : typeValue,
+    type: typeValue.startsWith(' ') ? typeValue.slice(1) : typeValue,
     root: typeValue.startsWith(' '),
     props,
     indices,
@@ -187,6 +209,25 @@ class EventQueue {
   }
 }
 
+const attributesMap = {
+  accesskey: 'accessKey',
+  bgcolor: 'bgColor',
+  class: 'className',
+  colspan: 'colSpan',
+  contenteditable: 'contentEditable',
+  crossorigin: 'crossOrigin',
+  dirname: 'dirName',
+  inputmode: 'inputMode',
+  ismap: 'isMap',
+  maxlength: 'maxLength',
+  minlength: 'minLength',
+  novalidate: 'noValidate',
+  readonly: 'readOnly',
+  referrerpolicy: 'referrerPolicy',
+  rowspan: 'rowSpan',
+  tabindex: 'tabIndex',
+};
+
 const getNode = (root, { data, info }, prev) => {
   if (prev?.__data === data) return prev;
 
@@ -226,6 +267,7 @@ const getNode = (root, { data, info }, prev) => {
       });
 
     if (!node.__mouseQueue) node.__mouseQueue = new EventQueue();
+    const boxPushChanged = node.__setBox && node.__setBox !== box?.push;
     node.__setBox = box?.push;
     node.__mouse = mouse;
     if (!node.__setMouseBox) {
@@ -252,13 +294,12 @@ const getNode = (root, { data, info }, prev) => {
       node.__setMouseBox = throttle(node.__setMouseBoxBase, 50);
     }
 
-    if (!box?.push !== !node.__observer) {
-      if (box?.push) {
-        observeSize(node, () => node.__setMouseBox({ box: getNodeBox(node) }));
-      } else {
-        unobserveSize(node);
-      }
+    if (box?.push) {
+      observeSize(node, () => node.__setMouseBox({ box: getNodeBox(node) }));
+    } else {
+      unobserveSize(node);
     }
+    if (boxPushChanged) node.__setMouseBox({ box: getNodeBox(node) });
     node.onscroll = () => onSizeChanges.forEach((x) => x());
 
     const mouseFunc = (dir) =>
@@ -296,7 +337,7 @@ const getNode = (root, { data, info }, prev) => {
 
     const props = {
       ...Object.keys(other).reduce(
-        (res, k) => ({ ...res, [k]: toJs(info.props[k]) }),
+        (res, k) => ({ ...res, [attributesMap[k] || k]: toJs(other[k]) }),
         {},
       ),
       onkeydown: keyFunc('down'),
@@ -334,11 +375,15 @@ const getNode = (root, { data, info }, prev) => {
 
     if (other.focus?.value) setTimeout(() => node.focus());
 
-    const diff = diffObjs(props, node.__props || {});
-    applyObj(node, diff);
-    node.__props = props;
+    if (props.innerHTML && !(node.__props || {}).innerHTML) {
+      updateChildren(root, node, []);
+    }
 
-    updateChildren(root, node, info.indices);
+    applyObj(node, diffObjs(props, node.__props || {}));
+
+    if (!props.innerHTML) updateChildren(root, node, info.indices);
+
+    node.__props = props;
   }
   node.__data = data;
   return node;
