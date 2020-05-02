@@ -4,7 +4,27 @@ const kebabToCamel = (s) =>
     .map((x, i) => (i === 0 ? x : `${x[0].toUpperCase()}${x.slice(1)}`))
     .join('');
 
+const attributesMap = {
+  accesskey: 'accessKey',
+  bgcolor: 'bgColor',
+  class: 'className',
+  colspan: 'colSpan',
+  contenteditable: 'contentEditable',
+  crossorigin: 'crossOrigin',
+  dirname: 'dirName',
+  inputmode: 'inputMode',
+  ismap: 'isMap',
+  maxlength: 'maxLength',
+  minlength: 'minLength',
+  novalidate: 'noValidate',
+  readonly: 'readOnly',
+  referrerpolicy: 'referrerPolicy',
+  rowspan: 'rowSpan',
+  tabindex: 'tabIndex',
+};
+
 const isObject = (x) => Object.prototype.toString.call(x) === '[object Object]';
+
 export const diffObjs = (next, prev) => {
   const result = {};
   Array.from(
@@ -18,23 +38,25 @@ export const diffObjs = (next, prev) => {
   });
   return result;
 };
-export const applyObj = (target, obj) => {
+
+export const applyObj = (target, obj, first) => {
   Object.keys(obj).forEach((k) => {
     if (!isObject(obj[k])) {
+      const key = first ? attributesMap[k] || k : k;
       try {
         if (['svg', 'path'].includes(target.tagName?.toLowerCase())) {
-          target.setAttribute(k, obj[k] === undefined ? null : obj[k]);
+          target.setAttribute(key, obj[k] === undefined ? null : obj[k]);
         } else if (
           Object.prototype.toString.call(target) ===
           '[object CSSStyleDeclaration]'
         ) {
           target[kebabToCamel(k)] = obj[k] === undefined ? null : obj[k];
         } else {
-          target[k] = obj[k] === undefined ? null : obj[k];
+          target[key] = obj[k] === undefined ? null : obj[k];
         }
       } catch {}
     } else {
-      applyObj(target[k], obj[k]);
+      applyObj(target[k], obj[k], false);
     }
   });
   return target;
