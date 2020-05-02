@@ -31,9 +31,9 @@ export default class Block {
   node;
   children = new Children();
   prev;
-  boxPush = new Throttled();
+  boxPush = new Throttled(true);
   keys = new Queue();
-  mousePush = new Throttled();
+  mousePush = new Throttled(false);
   mousePos = {};
   mouse = new Queue();
   update(data) {

@@ -35,7 +35,7 @@ export class Node {
         if (!prev[i]) {
           this.node.appendChild(next[i]);
         } else if (next[i] !== prev[i]) {
-          this.node.replaceChild(next, prev);
+          this.node.replaceChild(next[i], prev[i]);
         }
       }
     }

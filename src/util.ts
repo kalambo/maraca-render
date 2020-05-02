@@ -38,7 +38,11 @@ export const createElement = (type) => {
 export class Throttled {
   func = null as any;
   throttled = null as any;
+  withCurrent;
   current;
+  constructor(withCurrent) {
+    this.withCurrent = withCurrent;
+  }
   update(func) {
     if (!func) {
       this.func = null;
@@ -50,7 +54,7 @@ export class Throttled {
     }
   }
   run(value, flush) {
-    this.current = value;
+    if (this.withCurrent) this.current = value;
     this.throttled(value);
     if (flush) this.throttled.flush();
   }

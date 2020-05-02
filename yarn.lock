@@ -106,10 +106,10 @@ lodash.throttle@^4.1.1:
   resolved "https://registry.yarnpkg.com/lodash.throttle/-/lodash.throttle-4.1.1.tgz#c23e91b710242ac70c37f1e1cda9274cc39bf2f4"
   integrity sha1-wj6RtxAkKscMN/HhzaknTMOb8vQ=
 
-maraca@^0.7.0:
-  version "0.7.0"
-  resolved "https://registry.yarnpkg.com/maraca/-/maraca-0.7.0.tgz#435ca9fe4d27cd89b698197d8e7d9da0c5b75344"
-  integrity sha512-sId3Qy1lPwPoWsCP85j5E6su0bVWyrDLbHDseRMLMDOmhTdZCdqIKrrpELY3a+ROIQX8WVq71YVZ43uwMWo3gw==
+maraca@^0.7.4:
+  version "0.7.4"
+  resolved "https://registry.yarnpkg.com/maraca/-/maraca-0.7.4.tgz#50970f2ce702e124c9c81c1c79db10a4cd469fb5"
+  integrity sha512-1AnaVINYGIQovOGrD/xKXpJkwAI5MDKXqMBKCuIUDGAfmy5YPMR0j4cGOn5QhGo8AJSO6LHGvCUR6aKBotgU1g==
   dependencies:
     ohm-js "^0.14.0"
 
@@ -147,10 +147,10 @@ path-is-absolute@^1.0.0:
   resolved "https://registry.yarnpkg.com/path-is-absolute/-/path-is-absolute-1.0.1.tgz#174b9268735534ffbc7ace6bf53a5a9e1b5c5f5f"
   integrity sha1-F0uSaHNVNP+8es5r9TpanhtcX18=
 
-prettier@^2.0.4:
-  version "2.0.4"
-  resolved "https://registry.yarnpkg.com/prettier/-/prettier-2.0.4.tgz#2d1bae173e355996ee355ec9830a7a1ee05457ef"
-  integrity sha512-SVJIQ51spzFDvh4fIbCLvciiDMCrRhlN3mbZvv/+ycjvmF5E73bKdGfU8QDLNmjYJf+lsGnDBC4UUnvTe5OO0w==
+prettier@^2.0.5:
+  version "2.0.5"
+  resolved "https://registry.yarnpkg.com/prettier/-/prettier-2.0.5.tgz#d6d56282455243f2f92cc1716692c08aa31522d4"
+  integrity sha512-7PtVymN48hGcO4fGjybyBSIWDsLU4H4XlvOHfq91pz9kkGlonzwTfYkaIEwiRg/dAJF9YlbsduBAgtYLi+8cFg==
 
 rimraf@^3.0.2:
   version "3.0.2"
