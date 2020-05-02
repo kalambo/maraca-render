@@ -1,3 +1,5 @@
+import * as throttle from 'lodash.throttle';
+
 import Block from './block';
 
 export class Children {
@@ -32,3 +34,24 @@ export const createElement = (type) => {
     return document.createElement('div');
   }
 };
+
+export class Throttled {
+  func = null as any;
+  throttled = null as any;
+  current;
+  update(func) {
+    if (!func) {
+      this.func = null;
+      this.throttled = null;
+    } else if (func !== this.func) {
+      this.func = func;
+      this.throttled = throttle(func, 50);
+      if (this.current) func(this.current);
+    }
+  }
+  run(value, flush) {
+    this.current = value;
+    this.throttled(value);
+    if (flush) this.throttled.flush();
+  }
+}

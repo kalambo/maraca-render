@@ -2,7 +2,7 @@ export default class Queue {
   onChange;
   changes = {};
   held = {};
-  emit() {
+  emit(flush = false) {
     this.onChange(
       Object.keys({ ...this.changes, ...this.held }).reduce(
         (res, key) => ({
@@ -11,6 +11,7 @@ export default class Queue {
         }),
         {},
       ),
+      flush || Object.keys(this.changes).length > 0,
     );
   }
   set(key, value) {
@@ -20,11 +21,10 @@ export default class Queue {
     this.held[key] = ['down', 'true'].includes(value);
     this.emit();
   }
-  update(values = {}, onChange) {
+  update(values, onChange) {
     this.onChange = onChange;
-    for (const key of Object.keys(this.changes)) {
-      const value = values[key] || '';
-      if (value === this.changes[key][0]) {
+    for (const key of Object.keys(values || {})) {
+      if (this.changes[key] && values[key] === this.changes[key][0]) {
         this.changes[key].shift();
         if (this.changes[key].length === 0) delete this.changes[key];
       }
@@ -34,6 +34,6 @@ export default class Queue {
   clear() {
     this.changes = {};
     this.held = {};
-    this.onChange(null);
+    this.onChange(null, true);
   }
 }

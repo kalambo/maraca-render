@@ -1,29 +1,8 @@
 import { fromJs, toJs } from 'maraca';
-import * as throttle from 'lodash.throttle';
 
 import { Node, TextNode } from './node';
 import Queue from './queue';
-import { Children, createElement } from './util';
-
-class Updater {
-  push;
-  throttled;
-  current;
-  constructor() {
-    this.throttled = throttle((x) => {
-      if (this.push) this.push(x);
-    }, 50);
-  }
-  set(values, flush) {
-    this.current = fromJs(values);
-    this.throttled(this.current);
-    if (flush) this.throttled.flush();
-  }
-  update({ push }) {
-    if (this.push && push !== this.push) push(this.current);
-    this.push = push;
-  }
-}
+import { Children, createElement, Throttled } from './util';
 
 const buttonEvent = (get, set, stopButtons = [] as any[]) =>
   (set || stopButtons) &&
@@ -52,8 +31,9 @@ export default class Block {
   node;
   children = new Children();
   prev;
-  box = new Updater();
+  boxPush = new Throttled();
   keys = new Queue();
+  mousePush = new Throttled();
   mousePos = {};
   mouse = new Queue();
   update(data) {
@@ -67,11 +47,7 @@ export default class Block {
       if (type !== this.node?.type) {
         if (this.node) this.node.dispose();
         this.node =
-          type === 'text'
-            ? new TextNode()
-            : new Node(createElement(type), (box, first) =>
-                this.box.set(box, first),
-              );
+          type === 'text' ? new TextNode() : new Node(createElement(type));
       }
       if (type === 'text') {
         this.node.update(data);
@@ -97,18 +73,24 @@ export default class Block {
           '*': 'string',
         });
 
-        this.node.runBox(box.push);
-        this.box.update(box);
+        this.boxPush.update(box.push);
+        this.mousePush.update(mouse.push);
 
         this.keys.update(keys.value, (x) => keys.push && keys.push(fromJs(x)));
         this.mouse.update(
           mouse.value,
-          (x) =>
-            mouse.push && mouse.push(fromJs(x && { ...x, ...this.mousePos })),
+          (x, flush) =>
+            this.mousePush.func &&
+            this.mousePush.run(fromJs(x && { ...x, ...this.mousePos }), flush),
         );
 
         this.node.updateProps({
           ...props,
+
+          onbox:
+            this.boxPush.func &&
+            ((x, flush) =>
+              this.boxPush.func && this.boxPush.run(fromJs(x), flush)),
 
           value: value.value || '',
           onfocus: focus.push && (() => focus.push(fromJs(true))),
@@ -153,7 +135,7 @@ export default class Block {
               getMouseButtons(e.buttons).forEach((x) =>
                 this.mouse.set(x, 'true'),
               );
-              this.mouse.emit();
+              this.mouse.emit(true);
             }),
           onmousemove:
             mouse.push &&
