@@ -154,9 +154,7 @@ export default class Block {
 
         if (focus.value) setTimeout(() => this.node.focus());
 
-        const nodeChildren = this.children.update(
-          data.value.toBoth().indices.filter((x) => x),
-        );
+        const nodeChildren = this.children.update(data.value.indices);
         if (!props.innerHTML) this.node.updateChildren(nodeChildren);
       }
     }
