@@ -25,7 +25,7 @@ export class Node {
     applyObj(this.node, diffObjs(next, this.props || {}), true);
     this.props = next;
   }
-  updateChildren(nodes) {
+  updateChildren(nodes = [] as any[]) {
     const prev = [...this.node.childNodes];
     const next = nodes.map((n) => n.node);
     for (let i = 0; i < Math.max(prev.length, next.length); i++) {

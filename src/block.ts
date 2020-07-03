@@ -29,6 +29,7 @@ const getMouseButtons = (v) => {
 
 export default class Block {
   node;
+  portal;
   children = new Children();
   prev;
   boxPush = new Throttled(true);
@@ -36,7 +37,7 @@ export default class Block {
   mousePush = new Throttled(false);
   mousePos = {};
   mouse = new Queue();
-  update(data) {
+  update(data, portals) {
     if (data !== this.prev) {
       this.prev = data;
 
@@ -52,6 +53,8 @@ export default class Block {
       if (type === 'text') {
         this.node.update(data);
       } else {
+        this.portal = toJs(data, { portal: 'string' }).portal;
+
         const {
           focus,
           value,
@@ -84,83 +87,95 @@ export default class Block {
             this.mousePush.run(fromJs(x && { ...x, ...this.mousePos }), flush),
         );
 
-        this.node.updateProps({
-          ...props,
+        if (['svg', 'path'].includes(type)) {
+          this.node.updateProps(props);
+        } else {
+          this.node.updateProps({
+            ...props,
 
-          onbox:
-            this.boxPush.func &&
-            ((x, flush) =>
-              this.boxPush.func && this.boxPush.run(fromJs(x), flush)),
+            onbox:
+              this.boxPush.func &&
+              ((x, flush) =>
+                this.boxPush.func && this.boxPush.run(fromJs(x), flush)),
 
-          value: value.value || '',
-          onfocus: focus.push && (() => focus.push(fromJs(true))),
-          onblur: () => {
-            this.keys.clear();
-            if (focus.push) focus.push(fromJs(false));
-          },
-          oninput: value.push && ((e) => value.push(fromJs(e.target.value))),
+            value: value.value || '',
+            onfocus: focus.push && (() => focus.push(fromJs(true))),
+            onblur: () => {
+              this.keys.clear();
+              if (focus.push) focus.push(fromJs(false));
+            },
+            oninput: value.push && ((e) => value.push(fromJs(e.target.value))),
 
-          onkeydown: buttonEvent(
-            (e) => e.key,
-            keys.push && ((x) => this.keys.set(x, 'down')),
-            stopKeys,
-          ),
-          onkeyup: buttonEvent(
-            (e) => e.key,
-            keys.push && ((x) => this.keys.set(x, 'up')),
-            stopKeys,
-          ),
+            onkeydown: buttonEvent(
+              (e) => e.key,
+              keys.push && ((x) => this.keys.set(x, 'down')),
+              stopKeys,
+            ),
+            onkeyup: buttonEvent(
+              (e) => e.key,
+              keys.push && ((x) => this.keys.set(x, 'up')),
+              stopKeys,
+            ),
 
-          onmousedown: buttonEvent(
-            (e) => ({ 0: 'left', 1: 'middle', 2: 'right' }[e.button]),
-            mouse.push && ((x) => this.mouse.set(x, 'down')),
-            stopMouse,
-          ),
-          onmouseup: buttonEvent(
-            (e) => ({ 0: 'left', 1: 'middle', 2: 'right' }[e.button]),
-            mouse.push && ((x) => this.mouse.set(x, 'up')),
-            stopMouse,
-          ),
-          onclick: buttonEvent(
-            (e) => ({ 0: 'left', 1: 'middle', 2: 'right' }[e.button]),
-            null,
-            stopMouse,
-          ),
-          oncontextmenu: buttonEvent(() => 'right', null, stopMouse),
+            onmousedown: buttonEvent(
+              (e) => ({ 0: 'left', 1: 'middle', 2: 'right' }[e.button]),
+              mouse.push && ((x) => this.mouse.set(x, 'down')),
+              stopMouse,
+            ),
+            onmouseup: buttonEvent(
+              (e) => ({ 0: 'left', 1: 'middle', 2: 'right' }[e.button]),
+              mouse.push && ((x) => this.mouse.set(x, 'up')),
+              stopMouse,
+            ),
+            onclick: buttonEvent(
+              (e) => ({ 0: 'left', 1: 'middle', 2: 'right' }[e.button]),
+              null,
+              stopMouse,
+            ),
+            oncontextmenu: buttonEvent(() => 'right', null, stopMouse),
 
-          onmouseenter:
-            mouse.push &&
-            ((e) => {
-              this.mousePos = { x: e.clientX, y: e.clientY };
-              getMouseButtons(e.buttons).forEach((x) =>
-                this.mouse.set(x, 'true'),
-              );
-              this.mouse.emit(true);
-            }),
-          onmousemove:
-            mouse.push &&
-            ((e) => {
-              this.mousePos = { x: e.clientX, y: e.clientY };
-              getMouseButtons(e.buttons).forEach((x) =>
-                this.mouse.set(x, 'true'),
-              );
-              this.mouse.emit();
-            }),
-          onmouseleave: () => {
-            this.mousePos = {};
-            this.mouse.clear();
-          },
+            onmouseenter:
+              mouse.push &&
+              ((e) => {
+                this.mousePos = { x: e.clientX, y: e.clientY };
+                getMouseButtons(e.buttons).forEach((x) =>
+                  this.mouse.set(x, 'true'),
+                );
+                this.mouse.emit(true);
+              }),
+            onmousemove:
+              mouse.push &&
+              ((e) => {
+                this.mousePos = { x: e.clientX, y: e.clientY };
+                getMouseButtons(e.buttons).forEach((x) =>
+                  this.mouse.set(x, 'true'),
+                );
+                this.mouse.emit();
+              }),
+            onmouseleave: () => {
+              this.mousePos = {};
+              this.mouse.clear();
+            },
+          });
+        }
+
+        if (!document.activeElement && focus.value) {
+          setTimeout(() => this.node.focus());
+        }
+
+        const nodeChildren = this.children.update(data.value.indices, portals);
+        if (!props.innerHTML) this.node.updateChildren(nodeChildren['']);
+        Object.keys(portals).forEach((p) => {
+          portals[p].render(this, nodeChildren[p]);
         });
-
-        if (focus.value) setTimeout(() => this.node.focus());
-
-        const nodeChildren = this.children.update(data.value.indices);
-        if (!props.innerHTML) this.node.updateChildren(nodeChildren);
       }
     }
   }
-  dispose() {
-    this.children.dispose();
+  dispose(portals) {
+    Object.keys(portals).forEach((p) => {
+      portals[p].render(this);
+    });
+    this.children.dispose(portals);
     this.node.dispose();
   }
 }

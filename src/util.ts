@@ -4,22 +4,21 @@ import Block from './block';
 
 export class Children {
   blocks = [] as any[];
-  update(indices) {
+  update(indices, portals) {
     for (let i = indices.length; i < this.blocks.length; i++) {
-      this.blocks[i].dispose();
+      this.blocks[i].dispose(portals);
     }
     this.blocks.splice(indices.length);
-    return indices
-      .map((d, i) => {
-        this.blocks[i] = this.blocks[i] || new Block();
-        this.blocks[i].update(d);
-        return this.blocks[i].node;
-      })
-      .filter((x) => x);
+    return indices.reduce((res, d, i) => {
+      this.blocks[i] = this.blocks[i] || new Block();
+      this.blocks[i].update(d, portals);
+      const { node, portal = '' } = this.blocks[i];
+      return node ? { ...res, [portal]: [...(res[portal] || []), node] } : res;
+    }, {});
   }
-  dispose() {
+  dispose(portals) {
     this.blocks.forEach((b) => {
-      b.dispose();
+      b.dispose(portals);
     });
   }
 }
