@@ -1,6 +1,8 @@
 import { Node } from './node';
 import { Children } from './util';
 
+export { default as renderToString } from './ssr';
+
 class Portal {
   root;
   nodeMap = new Map();

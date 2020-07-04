@@ -1,8 +1,14 @@
-const kebabToCamel = (s) =>
-  s
+const kebabToCamel = (s) => {
+  let v = s;
+  if (v[0] === '-') {
+    v = v.slice(1);
+    if (!v.startsWith('ms-')) v = `${v[0].toUpperCase()}${v.slice(1)}`;
+  }
+  return v
     .split('-')
     .map((x, i) => (i === 0 ? x : `${x[0].toUpperCase()}${x.slice(1)}`))
     .join('');
+};
 
 const attributesMap = {
   accesskey: 'accessKey',

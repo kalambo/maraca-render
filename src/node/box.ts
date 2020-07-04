@@ -3,7 +3,9 @@ import { ResizeObserver } from '@juggle/resize-observer';
 const onBoxChanges = [] as any[];
 export const updateBoxes = () => onBoxChanges.forEach((x) => x());
 
-window.addEventListener('resize', updateBoxes);
+if (typeof window !== 'undefined') {
+  window.addEventListener('resize', updateBoxes);
+}
 
 const resizeObserver = new ResizeObserver((entries) => {
   for (const entry of entries) (entry.target as any).__emitBox();
