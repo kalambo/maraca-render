@@ -33,7 +33,7 @@ export default (root, portals = {}) => {
     (res, k) => ({ ...res, [k]: new Portal(portals[k]) }),
     {},
   );
-  const children = new Children();
+  const children = new Children([...root.childNodes]);
   return (data) => {
     if (data) {
       node.updateChildren(children.update([data], portalRenders)['']);

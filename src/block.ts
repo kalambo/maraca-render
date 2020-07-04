@@ -29,14 +29,25 @@ const getMouseButtons = (v) => {
 
 export default class Block {
   node;
+  children;
   portal;
-  children = new Children();
   prev;
   boxPush = new Throttled(true);
   keys = new Queue();
   mousePush = new Throttled(false);
   mousePos = {};
   mouse = new Queue();
+  constructor(element?) {
+    if (element) {
+      this.node =
+        element.nodeName === '#text'
+          ? new TextNode(element)
+          : new Node(element);
+      this.children = new Children([...element.childNodes]);
+    } else {
+      this.children = new Children();
+    }
+  }
   update(data, portals) {
     if (data !== this.prev) {
       this.prev = data;

@@ -3,47 +3,69 @@ import { observeBox, unobserveBox, updateBoxes } from './box';
 
 export class TextNode {
   type = 'text';
-  node = document.createTextNode('');
+  element;
+  constructor(element = document.createTextNode('')) {
+    this.element = element;
+  }
   update(data) {
-    this.node.textContent = data.value;
+    this.element.textContent = data.value;
   }
   dispose() {}
 }
 
 export class Node {
-  node;
+  element;
   type;
   props;
-  constructor(node) {
-    this.node = node;
-    this.type = node.nodeName.replace('#', '').toLowerCase();
-    node.onscroll = updateBoxes;
+  constructor(element) {
+    this.element = element;
+    this.type = element.nodeName.toLowerCase();
+    this.props = [...element.attributes].reduce(
+      (res, a) => ({
+        ...res,
+        [a.name]:
+          a.name === 'style'
+            ? a.value
+                .split(';')
+                .filter((s) => s.trim())
+                .reduce((r, s) => {
+                  const [k, v] = s.split(':');
+                  return { ...r, [k.trim()]: v.trim() };
+                }, {})
+            : a.value,
+      }),
+      {},
+    );
+    element.onscroll = updateBoxes;
   }
   updateProps({ onbox, ...next }) {
-    if (onbox) observeBox(this.node, onbox);
-    else unobserveBox(this.node);
-    applyObj(this.node, diffObjs(next, this.props || {}), true);
+    if (onbox) observeBox(this.element, onbox);
+    else unobserveBox(this.element);
+    applyObj(this.element, diffObjs(next, this.props || {}), true);
     this.props = next;
   }
   updateChildren(nodes = [] as any[]) {
-    const prev = [...this.node.childNodes];
-    const next = nodes.map((n) => n.node);
+    [...this.element.childNodes]
+      .filter((n) => n.nodeName === '#comment')
+      .forEach((n) => this.element.removeChild(n));
+    const prev = [...this.element.childNodes];
+    const next = nodes.map((n) => n.element);
     for (let i = 0; i < Math.max(prev.length, next.length); i++) {
       if (!next[i]) {
-        this.node.removeChild(prev[i]);
+        this.element.removeChild(prev[i]);
       } else {
         if (!prev[i]) {
-          this.node.appendChild(next[i]);
+          this.element.appendChild(next[i]);
         } else if (next[i] !== prev[i]) {
-          this.node.replaceChild(next[i], prev[i]);
+          this.element.replaceChild(next[i], prev[i]);
         }
       }
     }
   }
   focus() {
-    this.node.focus();
+    this.element.focus();
   }
   dispose() {
-    unobserveBox(this.node);
+    unobserveBox(this.element);
   }
 }

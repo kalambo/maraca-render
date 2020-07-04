@@ -3,7 +3,12 @@ import * as throttle from 'lodash.throttle';
 import Block from './block';
 
 export class Children {
-  blocks = [] as any[];
+  blocks;
+  constructor(elements = [] as any[]) {
+    this.blocks = elements
+      .filter((n) => n.nodeName !== '#comment')
+      .map((n) => new Block(n));
+  }
   update(indices, portals) {
     for (let i = indices.length; i < this.blocks.length; i++) {
       this.blocks[i].dispose(portals);

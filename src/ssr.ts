@@ -19,7 +19,7 @@ const renderToString = (data) => {
     .join(' ');
   const content =
     props.innerHTML ||
-    data.value.indices.map((d) => renderToString(d)).join('');
+    data.value.indices.map((d) => renderToString(d)).join('<!---->');
   return `<${tag}${attrs && ' '}${attrs}>${content}</${tag}>`;
 };
 

@@ -2,10 +2,10 @@
 # yarn lockfile v1
 
 
-"@juggle/resize-observer@^3.1.3":
-  version "3.1.3"
-  resolved "https://registry.yarnpkg.com/@juggle/resize-observer/-/resize-observer-3.1.3.tgz#d7373eb9a1afc371342b8cf1a07e34368f3d65d7"
-  integrity sha512-y7qc6SzZBlSpx8hEDfV0S9Cx6goROX/vBhS2Ru1Q78Jp1FlCMbxp7UcAN90rLgB3X8DSMBgDFxcmoG/VfdAhFA==
+"@juggle/resize-observer@^3.2.0":
+  version "3.2.0"
+  resolved "https://registry.yarnpkg.com/@juggle/resize-observer/-/resize-observer-3.2.0.tgz#5e0b448d27fe3091bae6216456512c5904d05661"
+  integrity sha512-fsLxt0CHx2HCV9EL8lDoVkwHffsA0snUpddYjdLyXcG5E41xaamn9ZyQqOE9TUJdrRlH8/hjIf+UdOdDeKCUgg==
 
 balanced-match@^1.0.0:
   version "1.0.0"
@@ -106,10 +106,10 @@ lodash.throttle@^4.1.1:
   resolved "https://registry.yarnpkg.com/lodash.throttle/-/lodash.throttle-4.1.1.tgz#c23e91b710242ac70c37f1e1cda9274cc39bf2f4"
   integrity sha1-wj6RtxAkKscMN/HhzaknTMOb8vQ=
 
-maraca@^0.8.0:
-  version "0.8.0"
-  resolved "https://registry.yarnpkg.com/maraca/-/maraca-0.8.0.tgz#0fd165b28db80c338193f1a733cdfa4ae51431ac"
-  integrity sha512-J9GGsg5VQ5n9UR8FMIV1Hh6qO1eqXZ/wgl1w3SLPK6fyv4mB3gbh8M4+owxCC1La9NZHIkoAyvucAQviryDMag==
+maraca@^0.8.3:
+  version "0.8.3"
+  resolved "https://registry.yarnpkg.com/maraca/-/maraca-0.8.3.tgz#f43bc9539638f944000e8a363f2e84404038d526"
+  integrity sha512-o/zULku4yLWZjZRisczMtusjutH6KeQBQmL+GgwQjTQ4sm7F7bFH72/mGHnKEb6TmhIPzz5BrLg7HJ1Y+NOUaQ==
   dependencies:
     ohm-js "^0.14.0"
 
@@ -169,10 +169,10 @@ type@^2.0.0:
   resolved "https://registry.yarnpkg.com/type/-/type-2.0.0.tgz#5f16ff6ef2eb44f260494dae271033b29c09a9c3"
   integrity sha512-KBt58xCHry4Cejnc2ISQAF7QY+ORngsWfxezO68+12hKV6lQY8P/psIkcbjeHWn7MqcgciWJyCCevFMJdIXpow==
 
-typescript@^3.9.3:
-  version "3.9.3"
-  resolved "https://registry.yarnpkg.com/typescript/-/typescript-3.9.3.tgz#d3ac8883a97c26139e42df5e93eeece33d610b8a"
-  integrity sha512-D/wqnB2xzNFIcoBG9FG8cXRDjiqSTbG2wd8DMZeQyJlP1vfTkIxH4GKveWaEBYySKIg+USu+E+EDIR47SqnaMQ==
+typescript@^3.9.6:
+  version "3.9.6"
+  resolved "https://registry.yarnpkg.com/typescript/-/typescript-3.9.6.tgz#8f3e0198a34c3ae17091b35571d3afd31999365a"
+  integrity sha512-Pspx3oKAPJtjNwE92YS05HQoY7z2SFyOpHo9MqJor3BXAGNaPUs83CuVp9VISFkSjyRfiTpmKuAYGJB7S7hOxw==
 
 util-extend@^1.0.3:
   version "1.0.3"
